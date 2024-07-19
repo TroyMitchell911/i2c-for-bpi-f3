@@ -132,7 +132,6 @@ enum spacemit_i2c_xfer_mode {
 
 /* i2c transfer phase during transaction */
 enum spacemit_i2c_xfer_phase {
-	SPACEMIT_I2C_XFER_MASTER_CODE,
 	SPACEMIT_I2C_XFER_SLAVE_ADDR,
 	SPACEMIT_I2C_XFER_BODY,
 	SPACEMIT_I2C_XFER_IDLE,
@@ -188,7 +187,6 @@ struct spacemit_i2c_dev {
 	bool			is_rx;
 	size_t			rx_cnt;
 	size_t			tx_cnt;
-	bool			smbus_rcv_len;
 
 	struct completion	complete;
 	u32			timeout;

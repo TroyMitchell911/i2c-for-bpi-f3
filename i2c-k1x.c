@@ -219,17 +219,8 @@ static bool spacemit_i2c_is_last_byte_to_send(struct spacemit_i2c_dev *spacemit_
 
 static bool spacemit_i2c_is_last_byte_to_receive(struct spacemit_i2c_dev *spacemit_i2c)
 {
-	/*
-	 * if the message length is received from slave device,
-	 * should at least to read out the length byte from slave.
-	 */
-	if (unlikely((spacemit_i2c->cur_msg->flags & I2C_M_RECV_LEN) &&
-		!spacemit_i2c->smbus_rcv_len)) {
-		return false;
-	} else {
-		return (spacemit_i2c->rx_cnt == spacemit_i2c->cur_msg->len - 1 &&
-			spacemit_i2c->msg_idx == spacemit_i2c->num - 1) ? true : false;
-	}
+	return (spacemit_i2c->rx_cnt == spacemit_i2c->cur_msg->len - 1 &&
+		spacemit_i2c->msg_idx == spacemit_i2c->num - 1) ? true : false;
 }
 
 static void spacemit_i2c_mark_rw_flag(struct spacemit_i2c_dev *spacemit_i2c)
@@ -260,7 +251,6 @@ static int spacemit_i2c_byte_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c
 static int spacemit_i2c_byte_xfer_body(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	int ret = 0;
-	u8  msglen = 0;
 	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
 
 	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
@@ -271,36 +261,11 @@ static int spacemit_i2c_byte_xfer_body(struct spacemit_i2c_dev *spacemit_i2c)
 		if (!spacemit_i2c->is_rx)
 			return 0;
 		dev_err(spacemit_i2c->dev, "receiver full\n");
-		/*
-		 * if the message length is received from slave device,
-		 * according to i2c spec, we should restrict the length size.
-		 */
-		if (unlikely((spacemit_i2c->cur_msg->flags & I2C_M_RECV_LEN) &&
-				!spacemit_i2c->smbus_rcv_len)) {
-			spacemit_i2c->smbus_rcv_len = true;
-			msglen = (u8)spacemit_i2c_read_reg(spacemit_i2c, REG_DBR);
-			if ((msglen == 0) ||
-				(msglen > I2C_SMBUS_BLOCK_MAX)) {
-				dev_err(spacemit_i2c->dev,
-						"SMbus len out of range\n");
-				*spacemit_i2c->msg_buf++ = 0;
-				spacemit_i2c->rx_cnt = spacemit_i2c->cur_msg->len;
-				cr_val |= CR_STOP | CR_ACKNAK;
-				cr_val |= CR_ALDIE | CR_TB;
-				spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
-
-				return 0;
-			} else {
-				*spacemit_i2c->msg_buf++ = msglen;
-				spacemit_i2c->cur_msg->len = msglen + 1;
-				spacemit_i2c->rx_cnt++;
-			}
-		} else {
-			if (spacemit_i2c->rx_cnt < spacemit_i2c->cur_msg->len) {
-				*spacemit_i2c->msg_buf++ =
-					spacemit_i2c_read_reg(spacemit_i2c, REG_DBR);
-				spacemit_i2c->rx_cnt++;
-			}
+		
+		if (spacemit_i2c->rx_cnt < spacemit_i2c->cur_msg->len) {
+			*spacemit_i2c->msg_buf++ =
+				spacemit_i2c_read_reg(spacemit_i2c, REG_DBR);
+			spacemit_i2c->rx_cnt++;
 		}
 		/* if transfer completes, ISR will handle it */
 		if (spacemit_i2c->i2c_status & (SR_MSD | SR_ACKNAK))
@@ -402,7 +367,6 @@ static int spacemit_i2c_byte_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c
 	spacemit_i2c->tx_cnt = 0;
 	spacemit_i2c->i2c_err = 0;
 	spacemit_i2c->i2c_status = 0;
-	spacemit_i2c->smbus_rcv_len = false;
 	spacemit_i2c->phase = SPACEMIT_I2C_XFER_IDLE;
 
 	spacemit_i2c_mark_rw_flag(spacemit_i2c);
@@ -419,13 +383,8 @@ static int spacemit_i2c_byte_xfer(struct spacemit_i2c_dev *spacemit_i2c)
 		return -1;
 
 	if (spacemit_i2c->phase == SPACEMIT_I2C_XFER_IDLE) {
-			dev_err(spacemit_i2c->dev, "SPACEMIT_I2C_XFER_IDLE\n");
-			spacemit_i2c_byte_xfer_send_slave_addr(spacemit_i2c);
-	} else if (spacemit_i2c->phase == SPACEMIT_I2C_XFER_MASTER_CODE) {
-		dev_err(spacemit_i2c->dev, "SPACEMIT_I2C_XFER_MASTER_CODE\n");
 		spacemit_i2c_byte_xfer_send_slave_addr(spacemit_i2c);
 	} else {
-		dev_err(spacemit_i2c->dev, "else\n");
 		ret = spacemit_i2c_byte_xfer_body(spacemit_i2c);
 	}
 
