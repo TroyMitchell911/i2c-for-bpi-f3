@@ -288,8 +288,7 @@ static int spacemit_i2c_byte_xfer_body(struct spacemit_i2c_dev *spacemit_i2c)
 				cr_val |= CR_STOP | CR_ACKNAK;
 				cr_val |= CR_ALDIE | CR_TB;
 				spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
-				dev_err(spacemit_i2c->dev, "send a stop\n");
-				complete(&spacemit_i2c->complete);
+
 				return 0;
 			} else {
 				*spacemit_i2c->msg_buf++ = msglen;
@@ -310,12 +309,8 @@ static int spacemit_i2c_byte_xfer_body(struct spacemit_i2c_dev *spacemit_i2c)
 		/* trigger next byte receive */
 		if (spacemit_i2c->rx_cnt < spacemit_i2c->cur_msg->len) {
 			/* send stop pulse for last byte of last msg */
-			if (spacemit_i2c_is_last_byte_to_receive(spacemit_i2c)) {
-				dev_err(spacemit_i2c->dev, "send a stop\n");
+			if (spacemit_i2c_is_last_byte_to_receive(spacemit_i2c))
 				cr_val |= CR_STOP | CR_ACKNAK;
-				complete(&spacemit_i2c->complete);
-			}
-				
 
 			cr_val |= CR_ALDIE | CR_TB;
 			spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
@@ -339,12 +334,8 @@ static int spacemit_i2c_byte_xfer_body(struct spacemit_i2c_dev *spacemit_i2c)
 			if (!spacemit_i2c->is_rx)
 				return 0;
 
-			if (spacemit_i2c_is_last_byte_to_receive(spacemit_i2c)) {
-				dev_err(spacemit_i2c->dev, "send a stop\n");
+			if (spacemit_i2c_is_last_byte_to_receive(spacemit_i2c)) 
 				cr_val |= CR_STOP | CR_ACKNAK;
-				complete(&spacemit_i2c->complete);
-			}
-				
 
 			/* trigger next byte receive */
 			cr_val |= CR_ALDIE | CR_TB;
@@ -377,7 +368,6 @@ static int spacemit_i2c_byte_xfer_body(struct spacemit_i2c_dev *spacemit_i2c)
 				if (spacemit_i2c_is_last_byte_to_send(spacemit_i2c)) {
 					dev_err(spacemit_i2c->dev, "send a stop\n");
 					cr_val |= CR_STOP;
-					complete(&spacemit_i2c->complete);
 				}
 					
 
@@ -513,7 +503,7 @@ err_out:
 
 		spacemit_i2c_clear_int_status(spacemit_i2c, SPACEMIT_I2C_INT_STATUS_MASK);
 
-		
+		complete(&spacemit_i2c->complete);
 	}
 
 	return IRQ_HANDLED;
