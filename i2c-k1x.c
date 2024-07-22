@@ -374,6 +374,17 @@ static int spacemit_i2c_byte_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c
 	return spacemit_i2c_byte_xfer(spacemit_i2c);
 }
 
+static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *spacemit_i2c) {
+	/* i2c error occurs */
+	if (unlikely(spacemit_i2c->i2c_err))
+		return -1;
+	
+	spacemit_i2c->count = 0;
+	spacemit_i2c_byte_xfer_send_slave_addr(spacemit_i2c);
+
+	return 0;
+}
+
 static int spacemit_i2c_byte_xfer(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	int ret = 0;
@@ -554,7 +565,8 @@ xfer_retry:
 	/* i2c msg transmit */
 	if (likely(spacemit_i2c->xfer_mode == SPACEMIT_I2C_MODE_INTERRUPT)) {
 		dev_err(spacemit_i2c->dev, "call byte_xfer from xfer\n");
-		ret = spacemit_i2c_byte_xfer(spacemit_i2c);
+		// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
+		ret = spacemit_i2c_xfer_msg(spacemit_i2c);
 	}
 		
 

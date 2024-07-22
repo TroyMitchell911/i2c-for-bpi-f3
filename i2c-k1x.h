@@ -187,6 +187,7 @@ struct spacemit_i2c_dev {
 	bool			is_rx;
 	size_t			rx_cnt;
 	size_t			tx_cnt;
+	size_t		count;
 
 	struct completion	complete;
 	u32			timeout;
