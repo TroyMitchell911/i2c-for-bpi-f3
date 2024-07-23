@@ -130,13 +130,6 @@ enum spacemit_i2c_xfer_mode {
 	SPACEMIT_I2C_MODE_INTERRUPT,
 };
 
-/* i2c transfer phase during transaction */
-enum spacemit_i2c_xfer_phase {
-	SPACEMIT_I2C_XFER_SLAVE_ADDR,
-	SPACEMIT_I2C_XFER_BODY,
-	SPACEMIT_I2C_XFER_IDLE,
-};
-
 /* i2c bus recover timeout: us */
 #define SPACEMIT_I2C_BUS_RECOVER_TIMEOUT	(100000)
 
@@ -178,21 +171,14 @@ struct spacemit_i2c_dev {
 	struct pinctrl_state	*pin_i2c_cp;
 	struct pinctrl_state	*pin_gpio;
 
-	/* slave address with read/write flag */
-	u32			slave_addr_rw;
-
 	struct i2c_msg		*cur_msg;
 	int			msg_idx;
 	u8			*msg_buf;
-	bool			is_rx;
-	size_t			rx_cnt;
-	size_t			tx_cnt;
 	size_t		count;
 
 	struct completion	complete;
 	u32			timeout;
 	enum spacemit_i2c_xfer_mode	xfer_mode;
-	enum spacemit_i2c_xfer_phase	phase;
 	u32			i2c_ctrl_reg_value;
 	u32			i2c_status;
 	u32			i2c_err;

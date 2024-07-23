@@ -214,24 +214,18 @@ spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *spacemit_i2c, u32 mask)
 	spacemit_i2c_write_reg(spacemit_i2c, REG_SR, mask & SPACEMIT_I2C_INT_STATUS_MASK);
 }
 
-static void spacemit_i2c_mark_rw_flag(struct spacemit_i2c_dev *spacemit_i2c)
-{
-	if (spacemit_i2c->cur_msg->flags & I2C_M_RD) {
-		spacemit_i2c->is_rx = true;
-		spacemit_i2c->slave_addr_rw =
-			((spacemit_i2c->cur_msg->addr & 0x7f) << 1) | 1;
-	} else {
-		spacemit_i2c->is_rx = false;
-		spacemit_i2c->slave_addr_rw = (spacemit_i2c->cur_msg->addr & 0x7f) << 1;
-	}
-}
-
 static void spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *spacemit_i2c)
 {
-	spacemit_i2c->phase = SPACEMIT_I2C_XFER_SLAVE_ADDR;
+	u32 slave_addr_rw;
+
+	if (spacemit_i2c->cur_msg->flags & I2C_M_RD) {
+		slave_addr_rw = ((spacemit_i2c->cur_msg->addr & 0x7f) << 1) | 1;
+	} else {
+		slave_addr_rw = (spacemit_i2c->cur_msg->addr & 0x7f) << 1;
+	}
 
 	/* write slave address to DBR for interrupt mode */
-	spacemit_i2c_write_reg(spacemit_i2c, REG_DBR, spacemit_i2c->slave_addr_rw);
+	spacemit_i2c_write_reg(spacemit_i2c, REG_DBR, slave_addr_rw);
 
 	spacemit_i2c_trigger_byte_xfer(spacemit_i2c);
 }
@@ -323,14 +317,9 @@ static int spacemit_i2c_next_msg(struct spacemit_i2c_dev *spacemit_i2c) {
 	spacemit_i2c->msg_idx++;
 	spacemit_i2c->cur_msg = spacemit_i2c->msgs + spacemit_i2c->msg_idx;
 	spacemit_i2c->msg_buf = spacemit_i2c->cur_msg->buf;
-	spacemit_i2c->rx_cnt = 0;
-	spacemit_i2c->tx_cnt = 0;
 	spacemit_i2c->i2c_err = 0;
 	spacemit_i2c->i2c_status = 0;
-	spacemit_i2c->phase = SPACEMIT_I2C_XFER_IDLE;
 	spacemit_i2c->count = spacemit_i2c->cur_msg->len;
-
-	spacemit_i2c_mark_rw_flag(spacemit_i2c);
 
 	return spacemit_i2c_xfer_msg(spacemit_i2c);
 }
@@ -475,11 +464,8 @@ static void spacemit_i2c_init_xfer_params(struct spacemit_i2c_dev *spacemit_i2c)
 	spacemit_i2c->msg_idx = 0;
 	spacemit_i2c->cur_msg = spacemit_i2c->msgs;
 	spacemit_i2c->msg_buf = spacemit_i2c->cur_msg->buf;
-	spacemit_i2c->rx_cnt = 0;
-	spacemit_i2c->tx_cnt = 0;
 	spacemit_i2c->i2c_err = 0;
 	spacemit_i2c->i2c_status = 0;
-	spacemit_i2c->phase = SPACEMIT_I2C_XFER_IDLE;
 }
 
 static int
@@ -509,8 +495,6 @@ xfer_retry:
 	spacemit_i2c_clear_int_status(spacemit_i2c, SPACEMIT_I2C_INT_STATUS_MASK);
 
 	spacemit_i2c_init_xfer_params(spacemit_i2c);
-
-	spacemit_i2c_mark_rw_flag(spacemit_i2c);
 
 	reinit_completion(&spacemit_i2c->complete);
 
