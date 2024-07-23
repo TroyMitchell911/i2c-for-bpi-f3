@@ -27,9 +27,6 @@
 
 #include "i2c-k1x.h"
 
-static int spacemit_i2c_next_msg(struct spacemit_i2c_dev *spacemit_i2c);
-static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *spacemit_i2c);
-
 static inline u32 spacemit_i2c_read_reg(struct spacemit_i2c_dev *spacemit_i2c, int reg)
 {
 	return readl(spacemit_i2c->mapbase + reg);
@@ -230,6 +227,31 @@ static void spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *spac
 	spacemit_i2c_trigger_byte_xfer(spacemit_i2c);
 }
 
+static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *spacemit_i2c) {
+	/* i2c error occurs */
+	if (unlikely(spacemit_i2c->i2c_err))
+		return -1;
+	
+	spacemit_i2c->count = spacemit_i2c->cur_msg->len;
+	spacemit_i2c_byte_xfer_send_slave_addr(spacemit_i2c);
+
+	return 0;
+}
+
+static int spacemit_i2c_next_msg(struct spacemit_i2c_dev *spacemit_i2c) {
+	if (spacemit_i2c->msg_idx == spacemit_i2c->num - 1)
+		return 0;
+
+	spacemit_i2c->msg_idx++;
+	spacemit_i2c->cur_msg = spacemit_i2c->msgs + spacemit_i2c->msg_idx;
+	spacemit_i2c->msg_buf = spacemit_i2c->cur_msg->buf;
+	spacemit_i2c->i2c_err = 0;
+	spacemit_i2c->i2c_status = 0;
+	spacemit_i2c->count = spacemit_i2c->cur_msg->len;
+
+	return spacemit_i2c_xfer_msg(spacemit_i2c);
+}
+
 static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c) {
 	int ret = 0;
 	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
@@ -253,6 +275,7 @@ static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c) {
 
 	return ret;
 }	
+
 static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c) {
 	int ret = 0;
 	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
@@ -310,30 +333,7 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c) {
 	return ret;
 }
 
-static int spacemit_i2c_next_msg(struct spacemit_i2c_dev *spacemit_i2c) {
-	if (spacemit_i2c->msg_idx == spacemit_i2c->num - 1)
-		return 0;
 
-	spacemit_i2c->msg_idx++;
-	spacemit_i2c->cur_msg = spacemit_i2c->msgs + spacemit_i2c->msg_idx;
-	spacemit_i2c->msg_buf = spacemit_i2c->cur_msg->buf;
-	spacemit_i2c->i2c_err = 0;
-	spacemit_i2c->i2c_status = 0;
-	spacemit_i2c->count = spacemit_i2c->cur_msg->len;
-
-	return spacemit_i2c_xfer_msg(spacemit_i2c);
-}
-
-static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *spacemit_i2c) {
-	/* i2c error occurs */
-	if (unlikely(spacemit_i2c->i2c_err))
-		return -1;
-	
-	spacemit_i2c->count = spacemit_i2c->cur_msg->len;
-	spacemit_i2c_byte_xfer_send_slave_addr(spacemit_i2c);
-
-	return 0;
-}
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *spacemit_i2c)
 {
