@@ -251,6 +251,29 @@ static void spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *spac
 static int spacemit_i2c_byte_xfer(struct spacemit_i2c_dev *spacemit_i2c);
 static int spacemit_i2c_byte_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c);
 
+static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c) {
+	int ret = 0;
+	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
+
+	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
+
+	if(spacemit_i2c->count == 1 && spacemit_i2c->msg_idx == spacemit_i2c->num - 1) {
+		cr_val |= CR_STOP | CR_ACKNAK;
+	}
+
+	/* trigger next byte receive */
+	cr_val |= CR_ALDIE | CR_TB;
+
+	/*
+		* Mask transmit empty interrupt to avoid useless tx
+		* interrupt signal after switch to receive mode, the
+		* next expected is receive full interrupt signal.
+		*/
+	cr_val &= ~CR_DTEIE;
+	spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
+
+	return ret;
+}	
 static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c) {
 	int ret = 0;
 	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
@@ -276,6 +299,32 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c) {
 		cr_val |= CR_ALDIE | CR_TB;
 		spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
 	}  else if (spacemit_i2c->msg_idx < spacemit_i2c->num - 1) {
+		spacemit_i2c_next_msg(spacemit_i2c);
+	}
+
+	return ret;
+}
+
+static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c) {
+	int ret = 0;
+	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
+
+	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
+
+	/* MSD comes with ITE */
+	if (spacemit_i2c->i2c_status & SR_MSD)
+		return ret;
+	
+	if(spacemit_i2c->count) {
+		spacemit_i2c_write_reg(spacemit_i2c, REG_DBR,
+						*spacemit_i2c->msg_buf++);
+		spacemit_i2c->count--;
+		if(!spacemit_i2c->count && spacemit_i2c->msg_idx == spacemit_i2c->num - 1) {
+			cr_val |= CR_STOP;
+		}
+		cr_val |= CR_ALDIE | CR_TB;
+		spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
+	} else if(spacemit_i2c->msg_idx < spacemit_i2c->num - 1) {
 		spacemit_i2c_next_msg(spacemit_i2c);
 	}
 
@@ -509,9 +558,12 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 			dev_err(spacemit_i2c->dev, "call read from int\n");
 			ret = spacemit_i2c_read(spacemit_i2c);
 			// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
-		} else {
-			dev_err(spacemit_i2c->dev, "call byte_xfer from int\n");
-			ret = spacemit_i2c_byte_xfer(spacemit_i2c);
+		} else if((spacemit_i2c->i2c_status & SR_ITE) && (spacemit_i2c->i2c_status & SR_RWM)){
+			dev_err(spacemit_i2c->dev, "call ready_read from int\n");
+			ret = spacemit_i2c_ready_read(spacemit_i2c);
+		} else if(spacemit_i2c->i2c_status & SR_ITE) {
+			dev_err(spacemit_i2c->dev, "call write from int\n");
+			ret = spacemit_i2c_write(spacemit_i2c);
 		}
 	}
 
