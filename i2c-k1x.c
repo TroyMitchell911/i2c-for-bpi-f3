@@ -179,9 +179,8 @@ static void spacemit_i2c_unit_init(struct spacemit_i2c_dev *spacemit_i2c)
 		*/
 	cr_val |= CR_DRFIE;
 
-	/* set speed bits */
-	if (spacemit_i2c->fast_mode)
-		cr_val |= CR_MODE_FAST;
+	/* set speed bits: default fast mode*/
+	cr_val |= CR_MODE_FAST;
 
 	/* disable response to general call */
 	cr_val |= CR_GCD;
@@ -449,10 +448,8 @@ static void spacemit_i2c_choose_xfer_mode(struct spacemit_i2c_dev *spacemit_i2c)
 
 	spacemit_i2c->xfer_mode = SPACEMIT_I2C_MODE_INTERRUPT;
 	
-	if (likely(spacemit_i2c->fast_mode))
-		freq = 400000;
-	else
-		freq = 100000;
+	/* fast mode */
+	freq = 400000;
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
 	spacemit_i2c->timeout = usecs_to_jiffies(timeout + 500000);	
@@ -581,9 +578,6 @@ spacemit_i2c_parse_dt(struct platform_device *pdev, struct spacemit_i2c_dev *spa
 {
 	struct device_node *dnode = pdev->dev.of_node;
 	int ret;
-
-	/* enable fast speed mode */
-	spacemit_i2c->fast_mode = of_property_read_bool(dnode, "spacemit,i2c-fast-mode");
 
 	ret = of_property_read_u32(dnode, "spacemit,i2c-lcr", &spacemit_i2c->i2c_lcr);
 	if (ret) {

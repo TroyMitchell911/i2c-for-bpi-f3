@@ -153,9 +153,6 @@ struct spacemit_i2c_dev {
 	struct clk		*clk;
 	int			irq;
 
-	/* i2c speed mode selection */
-	bool			fast_mode;
-
 	u32			i2c_lcr;
 	u32			i2c_wcr;
 
