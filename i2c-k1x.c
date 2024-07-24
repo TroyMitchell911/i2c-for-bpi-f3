@@ -253,7 +253,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *spacemit_i2c)
 	return 0;
 }
 
-static int spacemit_i2c_next_msg(struct spacemit_i2c_dev *spacemit_i2c)
+static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	if (spacemit_i2c->msg_idx == spacemit_i2c->num - 1)
 		return 0;
@@ -320,7 +320,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c)
 		cr_val |= CR_ALDIE | CR_TB;
 		spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
 	} else if (spacemit_i2c->msg_idx < spacemit_i2c->num - 1) {
-		spacemit_i2c_next_msg(spacemit_i2c);
+		spacemit_i2c_xfer_next_msg(spacemit_i2c);
 	}
 
 	return ret;
@@ -348,7 +348,7 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c)
 		cr_val |= CR_ALDIE | CR_TB;
 		spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
 	} else if (spacemit_i2c->msg_idx < spacemit_i2c->num - 1) {
-		spacemit_i2c_next_msg(spacemit_i2c);
+		spacemit_i2c_xfer_next_msg(spacemit_i2c);
 	}
 
 	return ret;
