@@ -300,7 +300,6 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c)
 	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
 
 	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
-	dev_err(spacemit_i2c->dev, "->count:%ld\n", spacemit_i2c->count);
 	if (spacemit_i2c->count) {
 		*spacemit_i2c->msg_buf++ =
 		    spacemit_i2c_read_reg(spacemit_i2c, REG_DBR);
@@ -400,22 +399,16 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	if (unlikely(spacemit_i2c->i2c_err))
 		goto err_out;
 
-	/* process interrupt mode */
-
-	if (spacemit_i2c->i2c_status & SR_IRF) {
-		dev_err(spacemit_i2c->dev, "call read from int\n");
+	/* rx not empty */
+	if (spacemit_i2c->i2c_status & SR_IRF)
 		ret = spacemit_i2c_read(spacemit_i2c);
-	} else if ((spacemit_i2c->i2c_status & SR_ITE)
-		   && (spacemit_i2c->i2c_status & SR_RWM)) {
-		dev_err(spacemit_i2c->dev, "call ready_read from int\n");
+	/* transmited slave addr with read flag */
+	else if ((spacemit_i2c->i2c_status & SR_ITE)
+		   && (spacemit_i2c->i2c_status & SR_RWM))
 		ret = spacemit_i2c_ready_read(spacemit_i2c);
-	} else if (spacemit_i2c->i2c_status & SR_ITE) {
-		dev_err(spacemit_i2c->dev, "call write from int\n");
+	/* tx empty */
+	else if (spacemit_i2c->i2c_status & SR_ITE)
 		ret = spacemit_i2c_write(spacemit_i2c);
-	}
-
-	dev_err(spacemit_i2c->dev, "err: %d, ret:%d, status & MSD: %d\n",
-		spacemit_i2c->i2c_err, ret, status & SR_MSD);
 
 err_out:
 	/*
