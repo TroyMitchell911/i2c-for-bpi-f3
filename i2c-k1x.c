@@ -381,12 +381,9 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 
 	/* process interrupt mode */
 	
-	// dev_err(spacemit_i2c->dev, "call byte_xfer from int\n");
-	// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
 	if (spacemit_i2c->i2c_status & SR_IRF) {
 		dev_err(spacemit_i2c->dev, "call read from int\n");
 		ret = spacemit_i2c_read(spacemit_i2c);
-		// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
 	} else if((spacemit_i2c->i2c_status & SR_ITE) && (spacemit_i2c->i2c_status & SR_RWM)){
 		dev_err(spacemit_i2c->dev, "call ready_read from int\n");
 		ret = spacemit_i2c_ready_read(spacemit_i2c);
@@ -502,7 +499,6 @@ xfer_retry:
 		goto err_recover;
 
 	/* i2c msg transmit */
-	dev_err(spacemit_i2c->dev, "call byte_xfer from xfer\n");
 	ret = spacemit_i2c_xfer_msg(spacemit_i2c);
 
 	if (unlikely(ret < 0)) {
