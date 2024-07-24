@@ -380,21 +380,21 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 		goto err_out;
 
 	/* process interrupt mode */
-	if (likely(spacemit_i2c->xfer_mode == SPACEMIT_I2C_MODE_INTERRUPT)) {
-		// dev_err(spacemit_i2c->dev, "call byte_xfer from int\n");
+	
+	// dev_err(spacemit_i2c->dev, "call byte_xfer from int\n");
+	// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
+	if (spacemit_i2c->i2c_status & SR_IRF) {
+		dev_err(spacemit_i2c->dev, "call read from int\n");
+		ret = spacemit_i2c_read(spacemit_i2c);
 		// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
-		if (spacemit_i2c->i2c_status & SR_IRF) {
-			dev_err(spacemit_i2c->dev, "call read from int\n");
-			ret = spacemit_i2c_read(spacemit_i2c);
-			// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
-		} else if((spacemit_i2c->i2c_status & SR_ITE) && (spacemit_i2c->i2c_status & SR_RWM)){
-			dev_err(spacemit_i2c->dev, "call ready_read from int\n");
-			ret = spacemit_i2c_ready_read(spacemit_i2c);
-		} else if(spacemit_i2c->i2c_status & SR_ITE) {
-			dev_err(spacemit_i2c->dev, "call write from int\n");
-			ret = spacemit_i2c_write(spacemit_i2c);
-		}
+	} else if((spacemit_i2c->i2c_status & SR_ITE) && (spacemit_i2c->i2c_status & SR_RWM)){
+		dev_err(spacemit_i2c->dev, "call ready_read from int\n");
+		ret = spacemit_i2c_ready_read(spacemit_i2c);
+	} else if(spacemit_i2c->i2c_status & SR_ITE) {
+		dev_err(spacemit_i2c->dev, "call write from int\n");
+		ret = spacemit_i2c_write(spacemit_i2c);
 	}
+	
 
 	dev_err(spacemit_i2c->dev, "err: %d, ret:%d, status & MSD: %d\n",
 			spacemit_i2c->i2c_err, 
@@ -445,8 +445,6 @@ static void spacemit_i2c_choose_xfer_mode(struct spacemit_i2c_dev *spacemit_i2c)
 		}
 		idx++;
 	}
-
-	spacemit_i2c->xfer_mode = SPACEMIT_I2C_MODE_INTERRUPT;
 	
 	/* fast mode */
 	freq = 400000;
@@ -504,12 +502,8 @@ xfer_retry:
 		goto err_recover;
 
 	/* i2c msg transmit */
-	if (likely(spacemit_i2c->xfer_mode == SPACEMIT_I2C_MODE_INTERRUPT)) {
-		dev_err(spacemit_i2c->dev, "call byte_xfer from xfer\n");
-		// ret = spacemit_i2c_byte_xfer(spacemit_i2c);
-		ret = spacemit_i2c_xfer_msg(spacemit_i2c);
-	}
-		
+	dev_err(spacemit_i2c->dev, "call byte_xfer from xfer\n");
+	ret = spacemit_i2c_xfer_msg(spacemit_i2c);
 
 	if (unlikely(ret < 0)) {
 		dev_dbg(spacemit_i2c->dev, "i2c transfer error\n");
@@ -521,16 +515,15 @@ xfer_retry:
 		goto err_xfer;
 	}
 
-	if (likely(spacemit_i2c->xfer_mode == SPACEMIT_I2C_MODE_INTERRUPT)) {
-		time_left = wait_for_completion_timeout(&spacemit_i2c->complete,
-							spacemit_i2c->timeout);
-		if (unlikely(time_left == 0)) {
-			dev_alert(spacemit_i2c->dev, "msg completion timeout\n");
-			spacemit_i2c_bus_reset(spacemit_i2c);
-			spacemit_i2c_reset(spacemit_i2c);
-			ret = -ETIMEDOUT;
-			goto err_xfer;
-		}
+	
+	time_left = wait_for_completion_timeout(&spacemit_i2c->complete,
+						spacemit_i2c->timeout);
+	if (unlikely(time_left == 0)) {
+		dev_alert(spacemit_i2c->dev, "msg completion timeout\n");
+		spacemit_i2c_bus_reset(spacemit_i2c);
+		spacemit_i2c_reset(spacemit_i2c);
+		ret = -ETIMEDOUT;
+		goto err_xfer;
 	}
 
 err_xfer:
@@ -551,8 +544,8 @@ err_recover:
 	/* retry i2c transfer 3 times for timeout and bus busy */
 	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN) &&
 		xfer_try <= spacemit_i2c->drv_retries)) {
-		dev_alert(spacemit_i2c->dev, "i2c transfer retry %d, ret %d mode %d err 0x%x\n",
-				xfer_try, ret, spacemit_i2c->xfer_mode, spacemit_i2c->i2c_err);
+		dev_alert(spacemit_i2c->dev, "i2c transfer retry %d, ret %d err 0x%x\n",
+				xfer_try, ret, spacemit_i2c->i2c_err);
 		usleep_range(150, 200);
 		ret = 0;
 		goto xfer_retry;

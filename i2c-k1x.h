@@ -125,11 +125,6 @@ enum {
 				CR_MSDIE),
 };
 
-/* i2c transfer mode */
-enum spacemit_i2c_xfer_mode {
-	SPACEMIT_I2C_MODE_INTERRUPT,
-};
-
 /* i2c bus recover timeout: us */
 #define SPACEMIT_I2C_BUS_RECOVER_TIMEOUT	(100000)
 
@@ -163,7 +158,6 @@ struct spacemit_i2c_dev {
 
 	struct completion	complete;
 	u32			timeout;
-	enum spacemit_i2c_xfer_mode	xfer_mode;
 	u32			i2c_ctrl_reg_value;
 	u32			i2c_status;
 	u32			i2c_err;
