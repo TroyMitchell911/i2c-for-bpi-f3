@@ -161,9 +161,6 @@ struct spacemit_i2c_dev {
 	u32			i2c_ctrl_reg_value;
 	u32			i2c_status;
 	u32			i2c_err;
-
-	/*  apb clock */
-	u32			apb_clock;
 };
 
 #endif /* _I2C_SPACEMIT_K1X_H */

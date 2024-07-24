@@ -593,17 +593,6 @@ spacemit_i2c_parse_dt(struct platform_device *pdev, struct spacemit_i2c_dev *spa
 	if (ret)
 		pdev->id = -1;
 
-	/* apb clock: 26MHz or 52MHz */
-	ret = of_property_read_u32(dnode, "spacemit,apb_clock", &spacemit_i2c->apb_clock);
-	if (ret) {
-		dev_err(spacemit_i2c->dev, "failed to get apb clock\n");
-		return ret;
-	} else if ((spacemit_i2c->apb_clock != SPACEMIT_I2C_APB_CLOCK_26M) &&
-			(spacemit_i2c->apb_clock != SPACEMIT_I2C_APB_CLOCK_52M)) {
-		dev_err(spacemit_i2c->dev, "the apb clock should be 26M or 52M\n");
-		return -EINVAL;
-	}
-
 	return 0;
 }
 
