@@ -11,6 +11,8 @@
 #include <linux/i2c-dev.h>
 #include <linux/pm_qos.h>
 
+#define SPACEMIT_I2C_DEFAULT_RETRIES	3
+
 /* spacemit i2c registers */
 enum {
 	REG_CR = 0x0,		/* Control Register */
@@ -139,7 +141,7 @@ struct spacemit_i2c_dev {
 	int num;
 	struct resource resrc;
 	struct mutex mtx;
-	int drv_retries;
+	int retries;
 
 	/* virtual base address mapped for register */
 	void __iomem *mapbase;

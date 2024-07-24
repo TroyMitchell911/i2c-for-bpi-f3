@@ -553,7 +553,7 @@ err_recover:
 	xfer_try++;
 	/* retry i2c transfer 3 times for timeout and bus busy */
 	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN) &&
-		     xfer_try <= spacemit_i2c->drv_retries)) {
+		     xfer_try <= spacemit_i2c->retries)) {
 		dev_alert(spacemit_i2c->dev,
 			  "i2c transfer retry %d, ret %d err 0x%x\n", xfer_try,
 			  ret, spacemit_i2c->i2c_err);
@@ -597,6 +597,16 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 				 &spacemit_i2c->i2c_wcr);
 	if (ret) {
 		dev_err(spacemit_i2c->dev, "failed to get i2c wcr\n");
+		return ret;
+	}
+
+	ret =
+	    of_property_read_u32(dnode, "spacemit,i2c-retries",
+				 &spacemit_i2c->retries);
+	if (ret) {
+		/* this is for the very low occasionally PMIC i2c access failure. */
+		dev_warn(spacemit_i2c->dev, "default retries: %d", SPACEMIT_I2C_DEFAULT_RETRIES);
+		spacemit_i2c->retries = SPACEMIT_I2C_DEFAULT_RETRIES;
 		return ret;
 	}
 
@@ -692,13 +702,9 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	spacemit_i2c->adapt.algo = &spacemit_i2c_algrtm;
 	spacemit_i2c->adapt.dev.parent = spacemit_i2c->dev;
 	spacemit_i2c->adapt.nr = pdev->id;
-	/* retries used by i2c framework: 3 times */
-	spacemit_i2c->adapt.retries = 3;
-	/*
-	 * retries used by i2c driver: 3 times
-	 * this is for the very low occasionally PMIC i2c access failure.
-	 */
-	spacemit_i2c->drv_retries = 3;
+	/* retries used by i2c framework */
+	spacemit_i2c->adapt.retries = spacemit_i2c->retries;
+
 	spacemit_i2c->adapt.dev.of_node = dnode;
 	spacemit_i2c->adapt.algo_data = spacemit_i2c;
 	strscpy(spacemit_i2c->adapt.name, "spacemit-i2c-adapter",
