@@ -152,24 +152,12 @@ struct spacemit_i2c_dev {
 	struct reset_control    *resets;
 	struct clk		*clk;
 	int			irq;
-	int			clk_freq_in;
-	int			clk_freq_out;
 
 	/* i2c speed mode selection */
 	bool			fast_mode;
-	bool			high_mode;
 
-	/* master code for high-speed mode */
-	u8			master_code;
-	u32			clk_rate;
 	u32			i2c_lcr;
 	u32			i2c_wcr;
-
-
-	struct pinctrl		*pinctrl;
-	struct pinctrl_state	*pin_i2c_ap;
-	struct pinctrl_state	*pin_i2c_cp;
-	struct pinctrl_state	*pin_gpio;
 
 	struct i2c_msg		*cur_msg;
 	int			msg_idx;
@@ -182,9 +170,6 @@ struct spacemit_i2c_dev {
 	u32			i2c_ctrl_reg_value;
 	u32			i2c_status;
 	u32			i2c_err;
-
-	/* hwlock address */
-	void __iomem            *hwlock_addr;
 
 	/*  apb clock */
 	u32			apb_clock;
