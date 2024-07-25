@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/i2c/i2c-k1.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: I2C controller embedded in SpacemiT's K1 SoC
+
+maintainers:
+  - Troy Mitchell <troymitchell988@gmail.com>
+
+properties:
+  compatible:
+    const: spacemit,k1-i2c
+
+  reg:
+    maxItems: 1
+  
+  interrupt-parent:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  resets:
+    maxItems: 1
+
+  clocks:
+    maxItems: 1
+
+  spacemit,adapter-id:
+    maxItems: 1
+
+  spacemit,lcr:
+    description: lcr is load counter register for controller_reset
+    maxItems: 1
+    default: 0x82c469f
+
+  spacemit,wcr:
+    description: wcr is wait counter register for controller_reset
+    maxItems: 1
+    default: 0x142a
+
+  spacemit,retries:
+    description: If the transfer fails, the number of retries
+    maxItems: 1
+    default: 3
+
+additionalProperties: false
+
+required:
+  - compatible
+  - reg
+  - interrupt-parent
+  - interrupts
+  - resets
+  - clocks
+
+examples:
+  - |
+  i2c0: i2c@d4010800 {
+    compatible = "spacemit,k1-i2c";
+    spacemit,adapter-id = <0>;
+    reg = <0x0 0xd4010800 0x0 0x38>;
+    #address-cells = <1>;
+    #size-cells = <0>;
+    interrupt-parent = <&intc>;
+    interrupts = <36>;
+    clocks = <&ccu CLK_TWSI0>;
+    resets = <&reset RESET_TWSI0>;
+  };
+
+  
