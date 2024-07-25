@@ -605,9 +605,8 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 				 &spacemit_i2c->retries);
 	if (ret) {
 		/* this is for the very low occasionally PMIC i2c access failure. */
-		dev_warn(spacemit_i2c->dev, "default retries: %d", SPACEMIT_I2C_DEFAULT_RETRIES);
+		dev_err(spacemit_i2c->dev, "default retries: %d", SPACEMIT_I2C_DEFAULT_RETRIES);
 		spacemit_i2c->retries = SPACEMIT_I2C_DEFAULT_RETRIES;
-		return ret;
 	}
 
 	/*
