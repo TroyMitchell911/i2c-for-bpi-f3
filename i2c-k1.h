@@ -12,6 +12,8 @@
 #include <linux/pm_qos.h>
 
 #define SPACEMIT_I2C_DEFAULT_RETRIES	3
+#define SPACEMIT_I2C_DEFAULT_LCR		0x82c469f
+#define SPACEMIT_I2C_DEFAULT_WCR		0x142a
 
 /* spacemit i2c registers */
 enum {
@@ -150,8 +152,8 @@ struct spacemit_i2c_dev {
 	struct clk *clk;
 	int irq;
 
-	u32 i2c_lcr;
-	u32 i2c_wcr;
+	u32 lcr;
+	u32 wcr;
 
 	struct i2c_msg *cur_msg;
 	int msg_idx;

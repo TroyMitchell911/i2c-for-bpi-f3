@@ -25,7 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/reboot.h>
 
-#include "i2c-k1x.h"
+#include "i2c-k1.h"
 
 static inline u32
 spacemit_i2c_read_reg(struct spacemit_i2c_dev *spacemit_i2c, int reg)
@@ -74,14 +74,14 @@ static void spacemit_i2c_controller_reset(struct spacemit_i2c_dev *spacemit_i2c)
 	spacemit_i2c_write_reg(spacemit_i2c, REG_CR, 0);
 
 	/* set load counter register */
-	if (spacemit_i2c->i2c_lcr)
+	if (spacemit_i2c->lcr)
 		spacemit_i2c_write_reg(spacemit_i2c, REG_LCR,
-				       spacemit_i2c->i2c_lcr);
+				       spacemit_i2c->lcr);
 
 	/* set wait counter register */
-	if (spacemit_i2c->i2c_wcr)
+	if (spacemit_i2c->wcr)
 		spacemit_i2c_write_reg(spacemit_i2c, REG_WCR,
-				       spacemit_i2c->i2c_wcr);
+				       spacemit_i2c->wcr);
 }
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *spacemit_i2c)
@@ -583,27 +583,27 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 	int ret;
 
 	ret =
-	    of_property_read_u32(dnode, "spacemit,i2c-lcr",
-				 &spacemit_i2c->i2c_lcr);
+	    of_property_read_u32(dnode, "spacemit,lcr",
+				 &spacemit_i2c->lcr);
 	if (ret) {
-		dev_err(spacemit_i2c->dev, "failed to get i2c lcr\n");
-		return ret;
+		dev_info(spacemit_i2c->dev, "default lcr value: %x\n", SPACEMIT_I2C_DEFAULT_LCR);
+		spacemit_i2c->lcr = SPACEMIT_I2C_DEFAULT_LCR;
 	}
 
 	ret =
-	    of_property_read_u32(dnode, "spacemit,i2c-wcr",
-				 &spacemit_i2c->i2c_wcr);
+	    of_property_read_u32(dnode, "spacemit,wcr",
+				 &spacemit_i2c->wcr);
 	if (ret) {
-		dev_err(spacemit_i2c->dev, "failed to get i2c wcr\n");
-		return ret;
+		dev_info(spacemit_i2c->dev, "default wcr value: %x\n", SPACEMIT_I2C_DEFAULT_WCR);
+		spacemit_i2c->wcr = SPACEMIT_I2C_DEFAULT_WCR;
 	}
 
 	ret =
-	    of_property_read_u32(dnode, "spacemit,i2c-retries",
+	    of_property_read_u32(dnode, "spacemit,retries",
 				 &spacemit_i2c->retries);
 	if (ret) {
 		/* this is for the very low occasionally PMIC i2c access failure. */
-		dev_err(spacemit_i2c->dev, "default retries: %d", SPACEMIT_I2C_DEFAULT_RETRIES);
+		dev_info(spacemit_i2c->dev, "default retries: %d", SPACEMIT_I2C_DEFAULT_RETRIES);
 		spacemit_i2c->retries = SPACEMIT_I2C_DEFAULT_RETRIES;
 	}
 
@@ -743,7 +743,7 @@ static int spacemit_i2c_remove(struct platform_device *pdev)
 
 static const struct of_device_id spacemit_i2c_dt_match[] = {
 	{
-	 .compatible = "spacemit,k1x-i2c",
+	 .compatible = "spacemit,k1-i2c",
 	  },
 	{ }
 };
@@ -754,7 +754,7 @@ static struct platform_driver spacemit_i2c_driver = {
 	.probe = spacemit_i2c_probe,
 	.remove = spacemit_i2c_remove,
 	.driver = {
-		   .name = "i2c-spacemit-k1x",
+		   .name = "i2c-spacemit-k1",
 		   .of_match_table = spacemit_i2c_dt_match,
 		    },
 };
