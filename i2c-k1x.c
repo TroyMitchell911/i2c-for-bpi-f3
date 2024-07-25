@@ -268,13 +268,9 @@ static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c)
 	return spacemit_i2c_xfer_msg(spacemit_i2c);
 }
 
-static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c)
+static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 {
-	int ret = 0;
-	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
-
-	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
-
+	/* send stop pulse for last byte of last msg */
 	if (spacemit_i2c->count == 1
 	    && spacemit_i2c->msg_idx == spacemit_i2c->num - 1) {
 		cr_val |= CR_STOP | CR_ACKNAK;
@@ -291,15 +287,13 @@ static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c)
 	cr_val &= ~CR_DTEIE;
 	spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
 
-	return ret;
+	return 0;
 }
 
-static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c)
+static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 {
 	int ret = 0;
-	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
-
-	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
+	
 	if (spacemit_i2c->count) {
 		*spacemit_i2c->msg_buf++ =
 		    spacemit_i2c_read_reg(spacemit_i2c, REG_DBR);
@@ -320,19 +314,16 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c)
 		cr_val |= CR_ALDIE | CR_TB;
 		spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
 	} else if (spacemit_i2c->msg_idx < spacemit_i2c->num - 1) {
-		spacemit_i2c_xfer_next_msg(spacemit_i2c);
+		ret = spacemit_i2c_xfer_next_msg(spacemit_i2c);
 	}
 
 	return ret;
 }
 
-static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c)
+static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 {
 	int ret = 0;
-	u32 cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
-
-	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
-
+	
 	/* MSD comes with ITE */
 	if (spacemit_i2c->i2c_status & SR_MSD)
 		return ret;
@@ -340,15 +331,18 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c)
 	if (spacemit_i2c->count) {
 		spacemit_i2c_write_reg(spacemit_i2c, REG_DBR,
 				       *spacemit_i2c->msg_buf++);
+		
 		spacemit_i2c->count--;
+
+		/* send stop pulse for last byte of last msg */
 		if (!spacemit_i2c->count
-		    && spacemit_i2c->msg_idx == spacemit_i2c->num - 1) {
+		    && spacemit_i2c->msg_idx == spacemit_i2c->num - 1) 
 			cr_val |= CR_STOP;
-		}
+
 		cr_val |= CR_ALDIE | CR_TB;
 		spacemit_i2c_write_reg(spacemit_i2c, REG_CR, cr_val);
 	} else if (spacemit_i2c->msg_idx < spacemit_i2c->num - 1) {
-		spacemit_i2c_xfer_next_msg(spacemit_i2c);
+		ret = spacemit_i2c_xfer_next_msg(spacemit_i2c);
 	}
 
 	return ret;
@@ -376,7 +370,7 @@ static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *spacemit_i2c)
 static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 {
 	struct spacemit_i2c_dev *spacemit_i2c = devid;
-	u32 status, ctrl;
+	u32 status, ctrl, cr_val;
 	int ret = 0;
 
 	/* record i2c status */
@@ -399,16 +393,20 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	if (unlikely(spacemit_i2c->i2c_err))
 		goto err_out;
 
+	cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
+
+	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
+
 	/* rx not empty */
 	if (spacemit_i2c->i2c_status & SR_IRF)
-		ret = spacemit_i2c_read(spacemit_i2c);
+		ret = spacemit_i2c_read(spacemit_i2c, cr_val);
 	/* transmited slave addr with read flag */
 	else if ((spacemit_i2c->i2c_status & SR_ITE)
 		   && (spacemit_i2c->i2c_status & SR_RWM))
-		ret = spacemit_i2c_ready_read(spacemit_i2c);
+		ret = spacemit_i2c_ready_read(spacemit_i2c, cr_val);
 	/* tx empty */
 	else if (spacemit_i2c->i2c_status & SR_ITE)
-		ret = spacemit_i2c_write(spacemit_i2c);
+		ret = spacemit_i2c_write(spacemit_i2c, cr_val);
 
 err_out:
 	/*
@@ -701,6 +699,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	spacemit_i2c->adapt.algo = &spacemit_i2c_algrtm;
 	spacemit_i2c->adapt.dev.parent = spacemit_i2c->dev;
 	spacemit_i2c->adapt.nr = pdev->id;
+
 	/* retries used by i2c framework */
 	spacemit_i2c->adapt.retries = spacemit_i2c->retries;
 
