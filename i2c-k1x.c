@@ -586,16 +586,16 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 	    of_property_read_u32(dnode, "spacemit,lcr",
 				 &spacemit_i2c->lcr);
 	if (ret) {
-		dev_err(spacemit_i2c->dev, "failed to get i2c lcr\n");
-		return ret;
+		dev_info(spacemit_i2c->dev, "default lcr value: %x\n", SPACEMIT_I2C_DEFAULT_LCR);
+		spacemit_i2c->lcr = SPACEMIT_I2C_DEFAULT_LCR;
 	}
 
 	ret =
 	    of_property_read_u32(dnode, "spacemit,wcr",
 				 &spacemit_i2c->wcr);
 	if (ret) {
-		dev_err(spacemit_i2c->dev, "failed to get i2c wcr\n");
-		return ret;
+		dev_info(spacemit_i2c->dev, "default wcr value: %x\n", SPACEMIT_I2C_DEFAULT_WCR);
+		spacemit_i2c->wcr = SPACEMIT_I2C_DEFAULT_WCR;
 	}
 
 	ret =
@@ -603,7 +603,7 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 				 &spacemit_i2c->retries);
 	if (ret) {
 		/* this is for the very low occasionally PMIC i2c access failure. */
-		dev_err(spacemit_i2c->dev, "default retries: %d", SPACEMIT_I2C_DEFAULT_RETRIES);
+		dev_info(spacemit_i2c->dev, "default retries: %d", SPACEMIT_I2C_DEFAULT_RETRIES);
 		spacemit_i2c->retries = SPACEMIT_I2C_DEFAULT_RETRIES;
 	}
 
