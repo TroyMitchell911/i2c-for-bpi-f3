@@ -11,7 +11,6 @@
 #include <linux/i2c-dev.h>
 #include <linux/pm_qos.h>
 
-#define SPACEMIT_I2C_DEFAULT_RETRIES	3
 #define SPACEMIT_I2C_DEFAULT_LCR		0x82c469f
 #define SPACEMIT_I2C_DEFAULT_WCR		0x142a
 
