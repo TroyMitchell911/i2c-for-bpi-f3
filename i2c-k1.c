@@ -133,7 +133,7 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *spacemit_i2c)
 	int timeout;
 	int cnt, ret = 0;
 
-	timeout = 1500;		/* 1500us  */
+	timeout = 1500;		
 
 	cnt = SPACEMIT_I2C_BUS_RECOVER_TIMEOUT / timeout;
 
@@ -152,7 +152,6 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *spacemit_i2c)
 	}
 
 	if (unlikely(cnt <= 0)) {
-		/* reset controller */
 		spacemit_i2c_reset(spacemit_i2c);
 		ret = -EAGAIN;
 	}
@@ -373,13 +372,11 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	u32 status, ctrl, cr_val;
 	int ret = 0;
 
-	/* record i2c status */
 	status = spacemit_i2c_read_reg(spacemit_i2c, REG_SR);
 	spacemit_i2c->i2c_status = status;
 
 	/* check if a valid interrupt status */
 	if (!status) {
-		/* nothing need be done */
 		return IRQ_HANDLED;
 	}
 
@@ -389,7 +386,6 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	/* clear interrupt status bits[31:18] */
 	spacemit_i2c_clear_int_status(spacemit_i2c, status);
 
-	/* i2c error happens */
 	if (unlikely(spacemit_i2c->i2c_err))
 		goto err_out;
 
@@ -489,10 +485,8 @@ xfer_retry:
 		/* i2c controller & bus reset */
 		spacemit_i2c_reset(spacemit_i2c);
 
-	/* choose transfer mode */
 	spacemit_i2c_choose_xfer_mode(spacemit_i2c);
 
-	/* i2c unit init */
 	spacemit_i2c_unit_init(spacemit_i2c);
 
 	/* clear all interrupt status */
@@ -511,7 +505,6 @@ xfer_retry:
 	if (unlikely(ret))
 		goto err_recover;
 
-	/* i2c msg transmit */
 	ret = spacemit_i2c_xfer_msg(spacemit_i2c);
 
 	if (unlikely(ret < 0)) {
@@ -541,14 +534,13 @@ err_xfer:
 err_recover:
 	disable_irq(spacemit_i2c->irq);
 
-	/* disable spacemit i2c */
 	spacemit_i2c_disable(spacemit_i2c);
 
-	/* process i2c error */
 	if (unlikely(spacemit_i2c->i2c_err))
 		ret = spacemit_i2c_handle_err(spacemit_i2c);
 
 	xfer_try++;
+	
 	/* retry i2c transfer 3 times for timeout and bus busy */
 	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN) &&
 		     xfer_try <= spacemit_i2c->adapt.retries)) {
@@ -616,7 +608,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	struct device_node *dnode = pdev->dev.of_node;
 	int ret = 0;
 
-	/* allocate memory */
 	spacemit_i2c = devm_kzalloc(&pdev->dev,
 				    sizeof(struct spacemit_i2c_dev),
 				    GFP_KERNEL);
@@ -635,6 +626,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get resets\n");
 		goto err_out;
 	}
+
 	/* reset the i2c controller */
 	reset_control_assert(spacemit_i2c->resets);
 	udelay(200);
@@ -691,7 +683,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	spacemit_i2c->adapt.dev.parent = spacemit_i2c->dev;
 	spacemit_i2c->adapt.nr = pdev->id;
 
-	/* retries used by i2c framework */
+	/* this is for the very low occasionally PMIC i2c access failure. */
 	spacemit_i2c->adapt.retries = 3;
 
 	spacemit_i2c->adapt.dev.of_node = dnode;
