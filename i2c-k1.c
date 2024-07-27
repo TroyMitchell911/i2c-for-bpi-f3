@@ -430,7 +430,7 @@ err_out:
 	return IRQ_HANDLED;
 }
 
-static void spacemit_i2c_choose_xfer_mode(struct spacemit_i2c_dev *spacemit_i2c)
+static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	unsigned long timeout;
 	int idx = 0, cnt = 0, freq;
@@ -438,14 +438,6 @@ static void spacemit_i2c_choose_xfer_mode(struct spacemit_i2c_dev *spacemit_i2c)
 	while (idx < spacemit_i2c->num) {
 		cnt += (spacemit_i2c->msgs + idx)->len + 1;
 
-		/*
-		 * Some SMBus transactions require that
-		 * we receive the transacttion length as the first read byte.
-		 * force to use I2C_MODE_INTERRUPT
-		 */
-		if ((spacemit_i2c->msgs + idx)->flags & I2C_M_RECV_LEN) {
-			cnt += I2C_SMBUS_BLOCK_MAX + 2;
-		}
 		idx++;
 	}
 
@@ -485,7 +477,7 @@ xfer_retry:
 		/* i2c controller & bus reset */
 		spacemit_i2c_reset(spacemit_i2c);
 
-	spacemit_i2c_choose_xfer_mode(spacemit_i2c);
+	spacemit_i2c_calc_timeout(spacemit_i2c);
 
 	spacemit_i2c_unit_init(spacemit_i2c);
 
