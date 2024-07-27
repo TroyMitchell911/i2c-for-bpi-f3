@@ -29,22 +29,20 @@ properties:
     maxItems: 1
 
   spacemit,adapter-id:
+    description: i2c adapter serial number.
     maxItems: 1
 
   spacemit,lcr:
-    description: lcr is load counter register for controller_reset
+    description: lcr is load counter register for controller_reset.
+                 Don't override defaults if you don't know what you are doing!
     maxItems: 1
     default: 0x82c469f
 
   spacemit,wcr:
-    description: wcr is wait counter register for controller_reset
+    description: wcr is wait counter register for controller_reset.
+                 Don't override defaults if you don't know what you are doing!
     maxItems: 1
     default: 0x142a
-
-  spacemit,retries:
-    description: If the transfer fails, the number of retries
-    maxItems: 1
-    default: 3
 
 additionalProperties: false
 
