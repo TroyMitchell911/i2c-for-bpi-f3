@@ -58,7 +58,6 @@ examples:
   - |
   i2c0: i2c@d4010800 {
     compatible = "spacemit,k1-i2c";
-    spacemit,adapter-id = <0>;
     reg = <0x0 0xd4010800 0x0 0x38>;
     #address-cells = <1>;
     #size-cells = <0>;
@@ -66,6 +65,7 @@ examples:
     interrupts = <36>;
     clocks = <&ccu CLK_TWSI0>;
     resets = <&reset RESET_TWSI0>;
+    spacemit,adapter-id = <0>;
   };
 
   
