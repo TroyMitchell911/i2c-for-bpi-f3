@@ -143,7 +143,6 @@ struct spacemit_i2c_dev {
 	int num;
 	struct resource resrc;
 	struct mutex mtx;
-	int retries;
 
 	/* virtual base address mapped for register */
 	void __iomem *mapbase;
