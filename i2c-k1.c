@@ -459,17 +459,10 @@ static void spacemit_i2c_init_xfer_params(struct spacemit_i2c_dev *spacemit_i2c)
 }
 
 static int
-spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
+spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
 {
-	struct spacemit_i2c_dev *spacemit_i2c = i2c_get_adapdata(adapt);
-	int ret = 0, xfer_try = 0;
-	unsigned long time_left;
+	int ret = 0;
 
-	mutex_lock(&spacemit_i2c->mtx);
-	spacemit_i2c->msgs = msgs;
-	spacemit_i2c->num = num;
-
-xfer_retry:
 	/* if unit keeps the last control status, don't need to do reset */
 	if (unlikely
 	    (spacemit_i2c_read_reg(spacemit_i2c, REG_CR) !=
@@ -495,7 +488,7 @@ xfer_retry:
 	/* i2c wait for bus busy */
 	ret = spacemit_i2c_recover_bus_busy(spacemit_i2c);
 	if (unlikely(ret))
-		goto err_recover;
+		return ret;
 
 	ret = spacemit_i2c_xfer_msg(spacemit_i2c);
 
@@ -506,7 +499,7 @@ xfer_retry:
 		 * the reset should be invalid argument error. */
 		if (ret != -ETIMEDOUT)
 			ret = -EINVAL;
-		goto err_xfer;
+		return ret;
 	}
 
 	time_left = wait_for_completion_timeout(&spacemit_i2c->complete,
@@ -516,8 +509,27 @@ xfer_retry:
 		spacemit_i2c_bus_reset(spacemit_i2c);
 		spacemit_i2c_reset(spacemit_i2c);
 		ret = -ETIMEDOUT;
-		goto err_xfer;
+		return ret;
 	}
+
+	return ret;
+}
+
+static int
+spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
+{
+	struct spacemit_i2c_dev *spacemit_i2c = i2c_get_adapdata(adapt);
+	int ret = 0, xfer_try = 0;
+	unsigned long time_left;
+
+	mutex_lock(&spacemit_i2c->mtx);
+	spacemit_i2c->msgs = msgs;
+	spacemit_i2c->num = num;
+
+xfer_retry:
+	ret = spacemit_i2c_xfer_core(spacemit_i2c);
+	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN))
+		goto err_recover;
 
 err_xfer:
 	if (likely(!ret))
