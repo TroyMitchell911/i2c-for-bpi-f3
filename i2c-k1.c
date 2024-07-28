@@ -462,6 +462,7 @@ static int
 spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	int ret = 0;
+	unsigned long time_left;
 
 	/* if unit keeps the last control status, don't need to do reset */
 	if (unlikely
@@ -520,7 +521,6 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 {
 	struct spacemit_i2c_dev *spacemit_i2c = i2c_get_adapdata(adapt);
 	int ret = 0, xfer_try = 0;
-	unsigned long time_left;
 
 	mutex_lock(&spacemit_i2c->mtx);
 	spacemit_i2c->msgs = msgs;
@@ -528,10 +528,9 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 
 xfer_retry:
 	ret = spacemit_i2c_xfer_core(spacemit_i2c);
-	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN))
+	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN)))
 		goto err_recover;
 
-err_xfer:
 	if (likely(!ret))
 		spacemit_i2c_check_bus_release(spacemit_i2c);
 
@@ -615,10 +614,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	spacemit_i2c = devm_kzalloc(&pdev->dev,
 				    sizeof(struct spacemit_i2c_dev),
 				    GFP_KERNEL);
-	if (!spacemit_i2c) {
-		ret = -ENOMEM;
-		goto err_out;
-	}
+	if (!spacemit_i2c)
+		return -ENOMEM;
 
 	spacemit_i2c->dev = &pdev->dev;
 	platform_set_drvdata(pdev, spacemit_i2c);
@@ -628,7 +625,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	    devm_reset_control_get_optional(&pdev->dev, NULL);
 	if (IS_ERR(spacemit_i2c->resets)) {
 		dev_err(&pdev->dev, "failed to get resets\n");
-		goto err_out;
+		ret = PTR_ERR(spacemit_i2c->resets);
+		return ret;
 	}
 
 	/* reset the i2c controller */
@@ -638,13 +636,12 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	ret = spacemit_i2c_parse_dt(pdev, spacemit_i2c);
 	if (ret)
-		goto err_out;
+		return ret;
 
 	ret = of_address_to_resource(dnode, 0, &spacemit_i2c->resrc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to get resource\n");
-		ret = -ENODEV;
-		goto err_out;
+		return -ENODEV;
 	}
 
 	spacemit_i2c->mapbase =
@@ -652,14 +649,14 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (IS_ERR(spacemit_i2c->mapbase)) {
 		dev_err(&pdev->dev, "failed to do ioremap\n");
 		ret = PTR_ERR(spacemit_i2c->mapbase);
-		goto err_out;
+		return ret;
 	}
 
 	spacemit_i2c->irq = platform_get_irq(pdev, 0);
 	if (spacemit_i2c->irq < 0) {
 		dev_err(spacemit_i2c->dev, "failed to get irq resource\n");
 		ret = spacemit_i2c->irq;
-		goto err_out;
+		return ret;
 	}
 
 	ret =
@@ -669,7 +666,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 			     dev_name(spacemit_i2c->dev), spacemit_i2c);
 	if (ret) {
 		dev_err(spacemit_i2c->dev, "failed to request irq\n");
-		goto err_out;
+		return ret;
 	}
 	disable_irq(spacemit_i2c->irq);
 
@@ -677,7 +674,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (IS_ERR(spacemit_i2c->clk)) {
 		dev_err(spacemit_i2c->dev, "failed to get clock\n");
 		ret = PTR_ERR(spacemit_i2c->clk);
-		goto err_out;
+		return ret;
 	}
 	clk_prepare_enable(spacemit_i2c->clk);
 
@@ -708,7 +705,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 err_clk:
 	clk_disable_unprepare(spacemit_i2c->clk);
-err_out:
 	return ret;
 }
 
