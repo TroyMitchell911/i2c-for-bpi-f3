@@ -166,9 +166,9 @@ struct spacemit_i2c_dev {
 
 	struct completion complete;
 	u32 timeout;
-	u32 i2c_ctrl_reg_value;
-	u32 i2c_status;
-	u32 i2c_err;
+	u32 ctrl_reg_value;
+	u32 status;
+	u32 err;
 };
 
 static inline u32
@@ -192,10 +192,10 @@ static void spacemit_i2c_enable(struct spacemit_i2c_dev *spacemit_i2c)
 
 static void spacemit_i2c_disable(struct spacemit_i2c_dev *spacemit_i2c)
 {
-	spacemit_i2c->i2c_ctrl_reg_value =
+	spacemit_i2c->ctrl_reg_value =
 	    spacemit_i2c_read_reg(spacemit_i2c, REG_CR) & ~CR_IUE;
 	spacemit_i2c_write_reg(spacemit_i2c, REG_CR,
-			       spacemit_i2c->i2c_ctrl_reg_value);
+			       spacemit_i2c->ctrl_reg_value);
 }
 
 static void spacemit_i2c_flush_fifo_buffer(struct spacemit_i2c_dev
@@ -363,7 +363,7 @@ spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *spacemit_i2c)
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	/* i2c error occurs */
-	if (unlikely(spacemit_i2c->i2c_err))
+	if (unlikely(spacemit_i2c->err))
 		return -1;
 
 	spacemit_i2c->count = spacemit_i2c->cur_msg->len;
@@ -380,8 +380,8 @@ static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c)
 	spacemit_i2c->msg_idx++;
 	spacemit_i2c->cur_msg = spacemit_i2c->msgs + spacemit_i2c->msg_idx;
 	spacemit_i2c->msg_buf = spacemit_i2c->cur_msg->buf;
-	spacemit_i2c->i2c_err = 0;
-	spacemit_i2c->i2c_status = 0;
+	spacemit_i2c->err = 0;
+	spacemit_i2c->status = 0;
 	spacemit_i2c->count = spacemit_i2c->cur_msg->len;
 
 	return spacemit_i2c_xfer_msg(spacemit_i2c);
@@ -421,7 +421,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 	}
 
 	/* if transfer completes, ISR will handle it */
-	if (spacemit_i2c->i2c_status & (SR_MSD | SR_ACKNAK))
+	if (spacemit_i2c->status & (SR_MSD | SR_ACKNAK))
 		return 0;
 
 	/* trigger next byte receive */
@@ -445,7 +445,7 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 	int ret = 0;
 
 	/* MSD comes with ITE */
-	if (spacemit_i2c->i2c_status & SR_MSD)
+	if (spacemit_i2c->status & SR_MSD)
 		return ret;
 
 	if (spacemit_i2c->count) {
@@ -470,18 +470,18 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *spacemit_i2c)
 {
-	if (unlikely(spacemit_i2c->i2c_err)) {
+	if (unlikely(spacemit_i2c->err)) {
 		dev_dbg(spacemit_i2c->dev, "i2c error status: 0x%08x\n",
-			spacemit_i2c->i2c_status);
-		if (spacemit_i2c->i2c_err & (SR_BED | SR_ALD))
+			spacemit_i2c->status);
+		if (spacemit_i2c->err & (SR_BED | SR_ALD))
 			spacemit_i2c_reset(spacemit_i2c);
 
 		/* try transfer again */
-		if (spacemit_i2c->i2c_err & (SR_RXOV | SR_ALD)) {
+		if (spacemit_i2c->err & (SR_RXOV | SR_ALD)) {
 			spacemit_i2c_flush_fifo_buffer(spacemit_i2c);
 			return -EAGAIN;
 		}
-		return (spacemit_i2c->i2c_status & SR_ACKNAK) ? -ENXIO : -EIO;
+		return (spacemit_i2c->status & SR_ACKNAK) ? -ENXIO : -EIO;
 	}
 
 	return 0;
@@ -494,19 +494,19 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	int ret = 0;
 
 	status = spacemit_i2c_read_reg(spacemit_i2c, REG_SR);
-	spacemit_i2c->i2c_status = status;
+	spacemit_i2c->status = status;
 
 	/* check if a valid interrupt status */
 	if (!status)
 		return IRQ_HANDLED;
 
 	/* bus error, rx overrun, arbitration lost */
-	spacemit_i2c->i2c_err = status & (SR_BED | SR_RXOV | SR_ALD);
+	spacemit_i2c->err = status & (SR_BED | SR_RXOV | SR_ALD);
 
 	/* clear interrupt status bits[31:18] */
 	spacemit_i2c_clear_int_status(spacemit_i2c, status);
 
-	if (unlikely(spacemit_i2c->i2c_err))
+	if (unlikely(spacemit_i2c->err))
 		goto err_out;
 
 	cr_val = spacemit_i2c_read_reg(spacemit_i2c, REG_CR);
@@ -514,14 +514,14 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
 
 	/* rx not empty */
-	if (spacemit_i2c->i2c_status & SR_IRF)
+	if (spacemit_i2c->status & SR_IRF)
 		ret = spacemit_i2c_read(spacemit_i2c, cr_val);
 	/* transmited slave addr with read flag */
-	else if ((spacemit_i2c->i2c_status & SR_ITE)
-		 && (spacemit_i2c->i2c_status & SR_RWM))
+	else if ((spacemit_i2c->status & SR_ITE)
+		 && (spacemit_i2c->status & SR_RWM))
 		ret = spacemit_i2c_ready_read(spacemit_i2c, cr_val);
 	/* tx empty */
-	else if (spacemit_i2c->i2c_status & SR_ITE)
+	else if (spacemit_i2c->status & SR_ITE)
 		ret = spacemit_i2c_write(spacemit_i2c, cr_val);
 
 err_out:
@@ -529,7 +529,7 @@ err_out:
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (likely(spacemit_i2c->i2c_err || (ret < 0) || (status & SR_MSD))) {
+	if (likely(spacemit_i2c->err || (ret < 0) || (status & SR_MSD))) {
 		/*
 		 * Here the transaction is already done, we don't need any
 		 * other interrupt signals from now, in case any interrupt
@@ -574,8 +574,8 @@ static void spacemit_i2c_init_xfer_params(struct spacemit_i2c_dev *spacemit_i2c)
 	spacemit_i2c->msg_idx = 0;
 	spacemit_i2c->cur_msg = spacemit_i2c->msgs;
 	spacemit_i2c->msg_buf = spacemit_i2c->cur_msg->buf;
-	spacemit_i2c->i2c_err = 0;
-	spacemit_i2c->i2c_status = 0;
+	spacemit_i2c->err = 0;
+	spacemit_i2c->status = 0;
 }
 
 static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
@@ -586,7 +586,7 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
 	/* if unit keeps the last control status, don't need to do reset */
 	if (unlikely
 	    (spacemit_i2c_read_reg(spacemit_i2c, REG_CR) !=
-	     spacemit_i2c->i2c_ctrl_reg_value))
+	     spacemit_i2c->ctrl_reg_value))
 		/* i2c controller & bus reset */
 		spacemit_i2c_reset(spacemit_i2c);
 
@@ -659,7 +659,7 @@ err_recover:
 
 	spacemit_i2c_disable(spacemit_i2c);
 
-	if (unlikely(spacemit_i2c->i2c_err))
+	if (unlikely(spacemit_i2c->err))
 		ret = spacemit_i2c_handle_err(spacemit_i2c);
 
 	xfer_try++;
@@ -669,7 +669,7 @@ err_recover:
 		     xfer_try <= spacemit_i2c->adapt.retries)) {
 		dev_alert(spacemit_i2c->dev,
 			  "i2c transfer retry %d, ret %d err 0x%x\n", xfer_try,
-			  ret, spacemit_i2c->i2c_err);
+			  ret, spacemit_i2c->err);
 		usleep_range(150, 200);
 		ret = 0;
 		goto xfer_retry;
