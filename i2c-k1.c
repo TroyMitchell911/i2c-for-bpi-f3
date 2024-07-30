@@ -492,7 +492,7 @@ spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
 
 	if (unlikely(ret < 0)) {
 		dev_dbg(spacemit_i2c->dev, "i2c transfer error\n");
-		/* timeout error should not be overrided, and the transfer
+		/* timeout error should not be overridden, and the transfer
 		 * error will be confirmed by err handle function latter,
 		 * the reset should be invalid argument error.
 		 */
@@ -742,5 +742,5 @@ static struct platform_driver spacemit_i2c_driver = {
 
 module_platform_driver(spacemit_i2c_driver);
 
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("i2c driver for k1 of spacemit SoCs");
