@@ -614,7 +614,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	spacemit_i2c->dev = &pdev->dev;
-	platform_set_drvdata(pdev, spacemit_i2c);
 	mutex_init(&spacemit_i2c->mtx);
 
 	ret = spacemit_i2c_parse_dt(pdev, spacemit_i2c);
@@ -696,6 +695,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 
+	platform_set_drvdata(pdev, spacemit_i2c);
 	dev_dbg(spacemit_i2c->dev, "driver probe success");
 	return 0;
 
