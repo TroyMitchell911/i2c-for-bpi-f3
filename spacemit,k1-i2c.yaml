@@ -25,22 +25,6 @@ properties:
   clocks:
     maxItems: 1
 
-  spacemit,adapter-id:
-    description: i2c adapter serial number.
-    maxItems: 1
-
-  spacemit,lcr:
-    description: lcr is load counter register for controller_reset.
-                 Don't override defaults if you don't know what you are doing!
-    maxItems: 1
-    default: 0x82c469f
-
-  spacemit,wcr:
-    description: wcr is wait counter register for controller_reset.
-                 Don't override defaults if you don't know what you are doing!
-    maxItems: 1
-    default: 0x142a
-
 additionalProperties: false
 
 required:
@@ -62,7 +46,6 @@ examples:
         interrupts = <36>;
         clocks = <&ccu CLK_TWSI0>;
         resets = <&reset RESET_TWSI0>;
-        spacemit,adapter-id = <0>;
     };
 
 ...

@@ -23,8 +23,8 @@
 #include <linux/time.h>
 #include <linux/uaccess.h>
 
-#define SPACEMIT_I2C_DEFAULT_LCR		0x82c469f
-#define SPACEMIT_I2C_DEFAULT_WCR		0x142a
+#define SPACEMIT_I2C_REG_LCR_VALUE		0x82c469f
+#define SPACEMIT_I2C_REG_WCR_VALUE		0x142a
 
 /* spacemit i2c registers */
 enum {
@@ -110,7 +110,7 @@ enum {
 
 /* register REG_WCR fields */
 enum {
-	WCR_COUNT = 0x0000001F,		/* COUNT: bit[4:0] */
+	WCR_COUNT = 0x0000001F,	/* COUNT: bit[4:0] */
 	WCR_COUNT1 = 0x000003E0,	/* HS_COUNT1: bit[9:5] */
 	WCR_COUNT2 = 0x00007C00,	/* HS_COUNT2: bit[14:10] */
 };
@@ -225,14 +225,12 @@ static void spacemit_i2c_controller_reset(struct spacemit_i2c_dev *spacemit_i2c)
 	spacemit_i2c_write_reg(spacemit_i2c, REG_CR, 0);
 
 	/* set load counter register */
-	if (spacemit_i2c->lcr)
-		spacemit_i2c_write_reg(spacemit_i2c, REG_LCR,
-				       spacemit_i2c->lcr);
+	spacemit_i2c_write_reg(spacemit_i2c, REG_LCR,
+			       SPACEMIT_I2C_REG_WCR_VALUE);
 
 	/* set wait counter register */
-	if (spacemit_i2c->wcr)
-		spacemit_i2c_write_reg(spacemit_i2c, REG_WCR,
-				       spacemit_i2c->wcr);
+	spacemit_i2c_write_reg(spacemit_i2c, REG_WCR,
+			       SPACEMIT_I2C_REG_LCR_VALUE);
 }
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *spacemit_i2c)
@@ -294,7 +292,8 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *spacemit_i2c)
 
 	/* wait unit and bus to recover idle */
 	while (unlikely
-	       (spacemit_i2c_read_reg(spacemit_i2c, REG_SR) & (SR_UB | SR_IBB))) {
+	       (spacemit_i2c_read_reg(spacemit_i2c, REG_SR) & (SR_UB | SR_IBB)))
+	{
 		if (cnt-- <= 0)
 			break;
 
@@ -416,7 +415,8 @@ static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *spacemit_i2c)
 	return spacemit_i2c_xfer_msg(spacemit_i2c);
 }
 
-static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
+static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c,
+				   u32 cr_val)
 {
 	/* send stop pulse for last byte of last msg */
 	if (spacemit_i2c->count == 1
@@ -546,7 +546,7 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 		ret = spacemit_i2c_read(spacemit_i2c, cr_val);
 	/* transmited slave addr with read flag */
 	else if ((spacemit_i2c->i2c_status & SR_ITE)
-		   && (spacemit_i2c->i2c_status & SR_RWM))
+		 && (spacemit_i2c->i2c_status & SR_RWM))
 		ret = spacemit_i2c_ready_read(spacemit_i2c, cr_val);
 	/* tx empty */
 	else if (spacemit_i2c->i2c_status & SR_ITE)
@@ -606,8 +606,7 @@ static void spacemit_i2c_init_xfer_params(struct spacemit_i2c_dev *spacemit_i2c)
 	spacemit_i2c->i2c_status = 0;
 }
 
-static int
-spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
+static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	int ret = 0;
 	unsigned long time_left;
@@ -719,41 +718,6 @@ static const struct i2c_algorithm spacemit_i2c_algrtm = {
 	.functionality = spacemit_i2c_func,
 };
 
-static int
-spacemit_i2c_parse_dt(struct platform_device *pdev,
-		      struct spacemit_i2c_dev *spacemit_i2c)
-{
-	struct device_node *of_node = pdev->dev.of_node;
-	int ret;
-
-	ret =
-	    of_property_read_u32(of_node, "spacemit,lcr",
-				 &spacemit_i2c->lcr);
-	if (ret) {
-		dev_info(spacemit_i2c->dev, "default lcr value: %x\n", SPACEMIT_I2C_DEFAULT_LCR);
-		spacemit_i2c->lcr = SPACEMIT_I2C_DEFAULT_LCR;
-	}
-
-	ret =
-	    of_property_read_u32(of_node, "spacemit,wcr",
-				 &spacemit_i2c->wcr);
-	if (ret) {
-		dev_info(spacemit_i2c->dev, "default wcr value: %x\n", SPACEMIT_I2C_DEFAULT_WCR);
-		spacemit_i2c->wcr = SPACEMIT_I2C_DEFAULT_WCR;
-	}
-
-	/*
-	 * adapter device id:
-	 * assigned in dt node or alias name, or automatically allocated
-	 * in i2c_add_numbered_adapter()
-	 */
-	ret = of_property_read_u32(of_node, "spacemit,adapter-id", &pdev->id);
-	if (ret)
-		pdev->id = -1;
-
-	return 0;
-}
-
 static int spacemit_i2c_probe(struct platform_device *pdev)
 {
 	struct spacemit_i2c_dev *spacemit_i2c;
@@ -766,12 +730,9 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (!spacemit_i2c)
 		return -ENOMEM;
 
+	dev_err(&pdev->dev, "pdev->id: %d\n", pdev->id);
 	spacemit_i2c->dev = &pdev->dev;
 	mutex_init(&spacemit_i2c->mtx);
-
-	ret = spacemit_i2c_parse_dt(pdev, spacemit_i2c);
-	if (ret)
-		return ret;
 
 	ret = of_address_to_resource(of_node, 0, &spacemit_i2c->resrc);
 	if (ret) {
@@ -787,8 +748,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	spacemit_i2c->resets =
-	    devm_reset_control_get(&pdev->dev, NULL);
+	spacemit_i2c->resets = devm_reset_control_get(&pdev->dev, NULL);
 	if (IS_ERR(spacemit_i2c->resets)) {
 		dev_err(&pdev->dev, "failed to get resets\n");
 		ret = PTR_ERR(spacemit_i2c->resets);
