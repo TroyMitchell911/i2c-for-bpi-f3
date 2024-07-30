@@ -3,7 +3,6 @@
  */
 
 #include <linux/clk.h>
-#include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/interrupt.h>
@@ -807,10 +806,8 @@ static int spacemit_i2c_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id spacemit_i2c_dt_match[] = {
-	{
-	 .compatible = "spacemit,k1-i2c",
-	  },
-	{ }
+	{ .compatible = "spacemit,k1-i2c", },
+	{ /* sentinel */ }
 };
 
 MODULE_DEVICE_TABLE(of, spacemit_i2c_dt_match);
@@ -819,9 +816,9 @@ static struct platform_driver spacemit_i2c_driver = {
 	.probe = spacemit_i2c_probe,
 	.remove = spacemit_i2c_remove,
 	.driver = {
-		   .name = "i2c-k1",
-		   .of_match_table = spacemit_i2c_dt_match,
-		    },
+		.name = "i2c-k1",
+		.of_match_table = spacemit_i2c_dt_match,
+	},
 };
 
 module_platform_driver(spacemit_i2c_driver);
