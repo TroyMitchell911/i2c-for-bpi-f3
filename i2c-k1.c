@@ -621,19 +621,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, spacemit_i2c);
 	mutex_init(&spacemit_i2c->mtx);
 
-	spacemit_i2c->resets =
-	    devm_reset_control_get_optional(&pdev->dev, NULL);
-	if (IS_ERR(spacemit_i2c->resets)) {
-		dev_err(&pdev->dev, "failed to get resets\n");
-		ret = PTR_ERR(spacemit_i2c->resets);
-		return ret;
-	}
-
-	/* reset the i2c controller */
-	reset_control_assert(spacemit_i2c->resets);
-	udelay(200);
-	reset_control_deassert(spacemit_i2c->resets);
-
 	ret = spacemit_i2c_parse_dt(pdev, spacemit_i2c);
 	if (ret)
 		return ret;
@@ -651,6 +638,19 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		ret = PTR_ERR(spacemit_i2c->mapbase);
 		return ret;
 	}
+
+	spacemit_i2c->resets =
+	    devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(spacemit_i2c->resets)) {
+		dev_err(&pdev->dev, "failed to get resets\n");
+		ret = PTR_ERR(spacemit_i2c->resets);
+		return ret;
+	}
+
+	/* reset the i2c controller */
+	reset_control_assert(spacemit_i2c->resets);
+	udelay(200);
+	reset_control_deassert(spacemit_i2c->resets);
 
 	spacemit_i2c->irq = platform_get_irq(pdev, 0);
 	if (spacemit_i2c->irq < 0) {
