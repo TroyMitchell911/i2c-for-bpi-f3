@@ -494,8 +494,8 @@ spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
 		dev_dbg(spacemit_i2c->dev, "i2c transfer error\n");
 		/* timeout error should not be overrided, and the transfer
 		 * error will be confirmed by err handle function latter,
-		 * the reset should be invalid argument error. 
-		 `*/
+		 * the reset should be invalid argument error.
+		 */
 		if (ret != -ETIMEDOUT)
 			ret = -EINVAL;
 		return ret;
