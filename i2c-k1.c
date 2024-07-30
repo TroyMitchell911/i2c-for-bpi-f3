@@ -1,29 +1,27 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
+/* SPDX-License-Identifier: GPL-2.0-only
  * Copyright (C) 2024 Troy Mitchell <troymitchell988@gmail.com>
- *
  */
 
-#include <linux/module.h>
-#include <linux/platform_device.h>
 #include <linux/clk.h>
-#include <linux/reset.h>
-#include <linux/string.h>
+#include <linux/debugfs.h>
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/interrupt.h>
-#include <linux/delay.h>
-#include <linux/io.h>
-#include <linux/mutex.h>
-#include <linux/timer.h>
-#include <linux/time.h>
-#include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/io.h>
+#include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#include <linux/scatterlist.h>
-#include <linux/debugfs.h>
-#include <linux/uaccess.h>
+#include <linux/platform_device.h>
 #include <linux/reboot.h>
+#include <linux/reset.h>
+#include <linux/scatterlist.h>
+#include <linux/slab.h>
+#include <linux/string.h>
+#include <linux/timer.h>
+#include <linux/time.h>
+#include <linux/uaccess.h>
 
 #include "i2c-k1.h"
 
