@@ -819,7 +819,7 @@ static struct platform_driver spacemit_i2c_driver = {
 	.probe = spacemit_i2c_probe,
 	.remove = spacemit_i2c_remove,
 	.driver = {
-		   .name = "i2c-spacemit-k1",
+		   .name = "i2c-k1",
 		   .of_match_table = spacemit_i2c_dt_match,
 		    },
 };

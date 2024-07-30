@@ -5,4 +5,4 @@ config I2C_SPACEMIT_K1
 	  Say yes if you want to use I2C interface on sapcemit k1 platform.
 
 	  This driver can also be built as a module. If so, the module will be
-	  called i2c-spacemit-k1.
+	  called i2c-k1.
