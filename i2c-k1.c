@@ -143,8 +143,7 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *spacemit_i2c)
 
 	/* wait unit and bus to recover idle */
 	while (unlikely
-	       (spacemit_i2c_read_reg(spacemit_i2c, REG_SR) & (SR_UB | SR_IBB)))
-	{
+	       (spacemit_i2c_read_reg(spacemit_i2c, REG_SR) & (SR_UB | SR_IBB))) {
 		if (cnt-- <= 0)
 			break;
 
@@ -228,11 +227,10 @@ spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *spacemit_i2c)
 {
 	u32 slave_addr_rw;
 
-	if (spacemit_i2c->cur_msg->flags & I2C_M_RD) {
+	if (spacemit_i2c->cur_msg->flags & I2C_M_RD)
 		slave_addr_rw = ((spacemit_i2c->cur_msg->addr & 0x7f) << 1) | 1;
-	} else {
+	else
 		slave_addr_rw = (spacemit_i2c->cur_msg->addr & 0x7f) << 1;
-	}
 
 	/* write slave address to DBR for interrupt mode */
 	spacemit_i2c_write_reg(spacemit_i2c, REG_DBR, slave_addr_rw);
@@ -376,9 +374,8 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	spacemit_i2c->i2c_status = status;
 
 	/* check if a valid interrupt status */
-	if (!status) {
+	if (!status)
 		return IRQ_HANDLED;
-	}
 
 	/* bus error, rx overrun, arbitration lost */
 	spacemit_i2c->i2c_err = status & (SR_BED | SR_RXOV | SR_ALD);
@@ -497,7 +494,8 @@ spacemit_i2c_xfer_core(struct spacemit_i2c_dev *spacemit_i2c)
 		dev_dbg(spacemit_i2c->dev, "i2c transfer error\n");
 		/* timeout error should not be overrided, and the transfer
 		 * error will be confirmed by err handle function latter,
-		 * the reset should be invalid argument error. */
+		 * the reset should be invalid argument error. 
+		 `*/
 		if (ret != -ETIMEDOUT)
 			ret = -EINVAL;
 		return ret;
