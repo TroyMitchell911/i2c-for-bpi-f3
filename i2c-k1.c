@@ -140,8 +140,7 @@ enum {
 /* i2c bus recover timeout: us */
 #define SPACEMIT_I2C_BUS_RECOVER_TIMEOUT	(100000)
 
-#define SPACEMIT_I2C_APB_CLOCK_26M		(26000000)
-#define SPACEMIT_I2C_APB_CLOCK_52M		(52000000)
+#define SPACEMIT_I2C_FAST_MODE_FREQ		(400000)
 
 /* i2c-spacemit driver's main struct */
 struct spacemit_i2c_dev {
@@ -562,10 +561,10 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *spacemit_i2c)
 	}
 
 	/* fast mode */
-	freq = 400000;
+	freq = SPACEMIT_I2C_FAST_MODE_FREQ;
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
-	spacemit_i2c->timeout = usecs_to_jiffies(timeout + 500000);
+	spacemit_i2c->timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2);
 }
 
 static void spacemit_i2c_init_xfer_params(struct spacemit_i2c_dev *spacemit_i2c)
