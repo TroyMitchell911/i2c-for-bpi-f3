@@ -9,6 +9,7 @@
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
 #include <linux/io.h>
+#include <linux/iopoll.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/of.h>
@@ -279,28 +280,15 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *spacemit_i2c)
 
 static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *spacemit_i2c)
 {
-	int timeout;
-	int cnt, ret = 0;
-
-	timeout = 1500;
-
-	cnt = SPACEMIT_I2C_BUS_RECOVER_TIMEOUT / timeout;
+	int ret = 0;
+	u32 val;
 
 	if (likely
 	    (!(spacemit_i2c_read_reg(spacemit_i2c, REG_SR) & (SR_UB | SR_IBB))))
 		return 0;
 
-	/* wait unit and bus to recover idle */
-	while (unlikely
-	       (spacemit_i2c_read_reg(spacemit_i2c, REG_SR) & (SR_UB | SR_IBB)))
-	{
-		if (cnt-- <= 0)
-			break;
-
-		usleep_range(timeout / 2, timeout);
-	}
-
-	if (unlikely(cnt <= 0)) {
+	ret = readl_poll_timeout(spacemit_i2c->mapbase + REG_SR, val, !(val & (SR_UB | SR_IBB)), 1500, SPACEMIT_I2C_BUS_RECOVER_TIMEOUT);
+	if (unlikely(ret)) {
 		spacemit_i2c_reset(spacemit_i2c);
 		ret = -EAGAIN;
 	}
