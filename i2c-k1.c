@@ -133,7 +133,7 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *spacemit_i2c)
 	int timeout;
 	int cnt, ret = 0;
 
-	timeout = 1500;		
+	timeout = 1500;
 
 	cnt = SPACEMIT_I2C_BUS_RECOVER_TIMEOUT / timeout;
 
@@ -290,7 +290,7 @@ static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *spacemit_i2c, u32 cr
 static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 {
 	int ret = 0;
-	
+
 	if (spacemit_i2c->count) {
 		*spacemit_i2c->msg_buf++ =
 		    spacemit_i2c_read_reg(spacemit_i2c, REG_DBR);
@@ -320,7 +320,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 {
 	int ret = 0;
-	
+
 	/* MSD comes with ITE */
 	if (spacemit_i2c->i2c_status & SR_MSD)
 		return ret;
@@ -328,12 +328,12 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *spacemit_i2c, u32 cr_val)
 	if (spacemit_i2c->count) {
 		spacemit_i2c_write_reg(spacemit_i2c, REG_DBR,
 				       *spacemit_i2c->msg_buf++);
-		
+
 		spacemit_i2c->count--;
 
 		/* send stop pulse for last byte of last msg */
 		if (!spacemit_i2c->count
-		    && spacemit_i2c->msg_idx == spacemit_i2c->num - 1) 
+		    && spacemit_i2c->msg_idx == spacemit_i2c->num - 1)
 			cr_val |= CR_STOP;
 
 		cr_val |= CR_ALDIE | CR_TB;
@@ -541,7 +541,7 @@ err_recover:
 		ret = spacemit_i2c_handle_err(spacemit_i2c);
 
 	xfer_try++;
-	
+
 	/* retry i2c transfer 3 times for timeout and bus busy */
 	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN) &&
 		     xfer_try <= spacemit_i2c->adapt.retries)) {

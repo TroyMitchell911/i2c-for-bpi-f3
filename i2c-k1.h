@@ -148,7 +148,7 @@ struct spacemit_i2c_dev {
 	struct reset_control *resets;
 	struct clk *clk;
 	int irq;
-	
+
 	/* for control reset param  */
 	u32 lcr;
 	u32 wcr;
