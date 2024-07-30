@@ -570,11 +570,11 @@ static int
 spacemit_i2c_parse_dt(struct platform_device *pdev,
 		      struct spacemit_i2c_dev *spacemit_i2c)
 {
-	struct device_node *dnode = pdev->dev.of_node;
+	struct device_node *of_node = pdev->dev.of_node;
 	int ret;
 
 	ret =
-	    of_property_read_u32(dnode, "spacemit,lcr",
+	    of_property_read_u32(of_node, "spacemit,lcr",
 				 &spacemit_i2c->lcr);
 	if (ret) {
 		dev_info(spacemit_i2c->dev, "default lcr value: %x\n", SPACEMIT_I2C_DEFAULT_LCR);
@@ -582,7 +582,7 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 	}
 
 	ret =
-	    of_property_read_u32(dnode, "spacemit,wcr",
+	    of_property_read_u32(of_node, "spacemit,wcr",
 				 &spacemit_i2c->wcr);
 	if (ret) {
 		dev_info(spacemit_i2c->dev, "default wcr value: %x\n", SPACEMIT_I2C_DEFAULT_WCR);
@@ -594,7 +594,7 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 	 * assigned in dt node or alias name, or automatically allocated
 	 * in i2c_add_numbered_adapter()
 	 */
-	ret = of_property_read_u32(dnode, "spacemit,adapter-id", &pdev->id);
+	ret = of_property_read_u32(of_node, "spacemit,adapter-id", &pdev->id);
 	if (ret)
 		pdev->id = -1;
 
@@ -604,7 +604,7 @@ spacemit_i2c_parse_dt(struct platform_device *pdev,
 static int spacemit_i2c_probe(struct platform_device *pdev)
 {
 	struct spacemit_i2c_dev *spacemit_i2c;
-	struct device_node *dnode = pdev->dev.of_node;
+	struct device_node *of_node = pdev->dev.of_node;
 	int ret = 0;
 
 	spacemit_i2c = devm_kzalloc(&pdev->dev,
@@ -620,7 +620,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = of_address_to_resource(dnode, 0, &spacemit_i2c->resrc);
+	ret = of_address_to_resource(of_node, 0, &spacemit_i2c->resrc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to get resource\n");
 		return -ENODEV;
@@ -682,7 +682,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	/* this is for the very low occasionally PMIC i2c access failure. */
 	spacemit_i2c->adapt.retries = 3;
 
-	spacemit_i2c->adapt.dev.of_node = dnode;
+	spacemit_i2c->adapt.dev.of_node = of_node;
 	spacemit_i2c->adapt.algo_data = spacemit_i2c;
 	strscpy(spacemit_i2c->adapt.name, "spacemit-i2c-adapter",
 		sizeof(spacemit_i2c->adapt.name));
