@@ -15,7 +15,7 @@ properties:
 
   reg:
     maxItems: 1
-  
+
   interrupts:
     maxItems: 1
 
