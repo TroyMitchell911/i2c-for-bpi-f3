@@ -24,9 +24,6 @@
 #include <linux/time.h>
 #include <linux/uaccess.h>
 
-#define SPACEMIT_I2C_REG_LCR_VALUE		0x82c469f
-#define SPACEMIT_I2C_REG_WCR_VALUE		0x142a
-
 /* spacemit i2c registers */
 enum {
 	REG_CR = 0x0,		/* Control Register */
@@ -163,10 +160,6 @@ struct spacemit_i2c_dev {
 	struct clk *clk;
 	int irq;
 
-	/* for control reset param  */
-	u32 lcr;
-	u32 wcr;
-
 	struct i2c_msg *cur_msg;
 	int msg_idx;
 	u8 *msg_buf;
@@ -224,14 +217,6 @@ static void spacemit_i2c_controller_reset(struct spacemit_i2c_dev *spacemit_i2c)
 	spacemit_i2c_write_reg(spacemit_i2c, REG_CR, CR_UR);
 	udelay(5);
 	spacemit_i2c_write_reg(spacemit_i2c, REG_CR, 0);
-
-	/* set load counter register */
-	spacemit_i2c_write_reg(spacemit_i2c, REG_LCR,
-			       SPACEMIT_I2C_REG_WCR_VALUE);
-
-	/* set wait counter register */
-	spacemit_i2c_write_reg(spacemit_i2c, REG_WCR,
-			       SPACEMIT_I2C_REG_LCR_VALUE);
 }
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *spacemit_i2c)
