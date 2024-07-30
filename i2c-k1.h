@@ -98,7 +98,7 @@ enum {
 
 /* register REG_WCR fields */
 enum {
-	WCR_COUNT = 0x0000001F,	/* COUNT: bit[4:0] */
+	WCR_COUNT = 0x0000001F,		/* COUNT: bit[4:0] */
 	WCR_COUNT1 = 0x000003E0,	/* HS_COUNT1: bit[9:5] */
 	WCR_COUNT2 = 0x00007C00,	/* HS_COUNT2: bit[14:10] */
 };
@@ -149,7 +149,8 @@ struct spacemit_i2c_dev {
 	struct reset_control *resets;
 	struct clk *clk;
 	int irq;
-
+	
+	/* for control reset param  */
 	u32 lcr;
 	u32 wcr;
 
