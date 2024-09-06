@@ -44,8 +44,8 @@ examples:
         #size-cells = <0>;
         interrupt-parent = <&intc>;
         interrupts = <36>;
-        clocks = <&ccu CLK_TWSI0>;
-        resets = <&reset RESET_TWSI0>;
+        clocks = <&ccu 90>;
+        resets = <&reset 27>;
     };
 
 ...
