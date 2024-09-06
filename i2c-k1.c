@@ -155,7 +155,6 @@ struct spacemit_i2c_dev {
 	void __iomem *mapbase;
 
 	struct reset_control *resets;
-	struct clk *clk;
 	int irq;
 
 	struct i2c_msg *cur_msg;
@@ -749,15 +748,9 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		return ret;
 	}
 	disable_irq(i2c->irq);
-
-	i2c->clk = devm_clk_get(i2c->dev, NULL);
-	if (IS_ERR(i2c->clk)) {
-		dev_err(i2c->dev, "failed to get clock\n");
-		ret = PTR_ERR(i2c->clk);
-		return ret;
-	}
-	clk_prepare_enable(i2c->clk);
-
+	
+	devm_clk_get_enabled(&pdev->dev, NULL);
+	
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
 	i2c->adapt.algo = &spacemit_i2c_algrtm;
@@ -777,16 +770,12 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	ret = i2c_add_numbered_adapter(&i2c->adapt);
 	if (ret) {
 		dev_err(i2c->dev, "failed to add i2c adapter\n");
-		goto err_clk;
+		return ret;
 	}
 
 	platform_set_drvdata(pdev, i2c);
 	dev_dbg(i2c->dev, "driver probe success");
 	return 0;
-
-err_clk:
-	clk_disable_unprepare(i2c->clk);
-	return ret;
 }
 
 static int spacemit_i2c_remove(struct platform_device *pdev)
@@ -798,8 +787,6 @@ static int spacemit_i2c_remove(struct platform_device *pdev)
 	mutex_destroy(&i2c->mtx);
 
 	reset_control_assert(i2c->resets);
-
-	clk_disable_unprepare(i2c->clk);
 
 	dev_dbg(i2c->dev, "driver removed\n");
 	return 0;
