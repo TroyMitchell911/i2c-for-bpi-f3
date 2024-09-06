@@ -1,136 +1,138 @@
-/* SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-only
+/*
  * Copyright (C) 2024 Troy Mitchell <troymitchell988@gmail.com>
  */
 
-#include <linux/clk.h>
-#include <linux/delay.h>
-#include <linux/err.h>
-#include <linux/interrupt.h>
-#include <linux/i2c.h>
-#include <linux/io.h>
-#include <linux/iopoll.h>
-#include <linux/module.h>
-#include <linux/mutex.h>
-#include <linux/of.h>
-#include <linux/of_address.h>
-#include <linux/platform_device.h>
-#include <linux/reboot.h>
-#include <linux/reset.h>
-#include <linux/scatterlist.h>
-#include <linux/slab.h>
-#include <linux/string.h>
-#include <linux/timer.h>
-#include <linux/time.h>
-#include <linux/uaccess.h>
+ #include <linux/clk.h>
+ #include <linux/delay.h>
+ #include <linux/err.h>
+ #include <linux/interrupt.h>
+ #include <linux/i2c.h>
+ #include <linux/io.h>
+ #include <linux/iopoll.h>
+ #include <linux/module.h>
+ #include <linux/mutex.h>
+ #include <linux/of.h>
+ #include <linux/of_address.h>
+ #include <linux/platform_device.h>
+ #include <linux/reboot.h>
+ #include <linux/reset.h>
+ #include <linux/scatterlist.h>
+ #include <linux/slab.h>
+ #include <linux/string.h>
+ #include <linux/timer.h>
+ #include <linux/time.h>
+ #include <linux/uaccess.h>
 
 /* spacemit i2c registers */
-#define REG_CR          0x0     /* Control Register */
-#define REG_SR          0x4     /* Status Register */
-#define REG_SAR         0x8     /* Slave Address Register */
-#define REG_DBR         0xc     /* Data Buffer Register */
-#define REG_LCR         0x10    /* Load Count Register */
-#define REG_WCR         0x14    /* Wait Count Register */
-#define REG_RST_CYC     0x18    /* Bus reset cycle counter */
-#define REG_BMR         0x1c    /* Bus monitor register */
-#define REG_WFIFO       0x20    /* Write FIFO Register */
-#define REG_WFIFO_WPTR  0x24    /* Write FIFO Write Pointer Register */
-#define REG_WFIFO_RPTR  0x28    /* Write FIFO Read Pointer Register */
-#define REG_RFIFO       0x2c    /* Read FIFO Register */
-#define REG_RFIFO_WPTR  0x30    /* Read FIFO Write Pointer Register */
-#define REG_RFIFO_RPTR  0x34    /* Read FIFO Read Pointer Register */
+ #define REG_CR          0x0     /* Control Register */
+ #define REG_SR          0x4     /* Status Register */
+ #define REG_SAR         0x8     /* Slave Address Register */
+ #define REG_DBR         0xc     /* Data Buffer Register */
+ #define REG_LCR         0x10    /* Load Count Register */
+ #define REG_WCR         0x14    /* Wait Count Register */
+ #define REG_RST_CYC     0x18    /* Bus reset cycle counter */
+ #define REG_BMR         0x1c    /* Bus monitor register */
+ #define REG_WFIFO       0x20    /* Write FIFO Register */
+ #define REG_WFIFO_WPTR  0x24    /* Write FIFO Write Pointer Register */
+ #define REG_WFIFO_RPTR  0x28    /* Write FIFO Read Pointer Register */
+ #define REG_RFIFO       0x2c    /* Read FIFO Register */
+ #define REG_RFIFO_WPTR  0x30    /* Read FIFO Write Pointer Register */
+ #define REG_RFIFO_RPTR  0x34    /* Read FIFO Read Pointer Register */
 
 /* register REG_CR fields */
-#define CR_START        BIT(0)  /* start bit */
-#define CR_STOP         BIT(1)  /* stop bit */
-#define CR_ACKNAK       BIT(2)  /* send ACK(0) or NAK(1) */
-#define CR_TB           BIT(3)  /* transfer byte bit */
-#define CR_TXBEGIN      BIT(4)  /* transaction begin */
-#define CR_FIFOEN       BIT(5)  /* enable FIFO mode */
-#define CR_GPIOEN       BIT(6)  /* enable GPIO mode for SCL in HS */
-#define CR_DMAEN        BIT(7)  /* enable DMA for TX and RX FIFOs */
-#define CR_MODE_FAST    BIT(8)  /* bus mode (master operation) */
-#define CR_MODE_HIGH    BIT(9)  /* bus mode (master operation) */
-#define CR_UR           BIT(10) /* unit reset */
-#define CR_RSTREQ       BIT(11) /* i2c bus reset request */
-#define CR_MA           BIT(12) /* master abort */
-#define CR_SCLE         BIT(13) /* master clock enable */
-#define CR_IUE          BIT(14) /* unit enable */
-#define CR_HS_STRETCH   BIT(16) /* I2C hs stretch */
-#define CR_ALDIE        BIT(18) /* enable arbitration interrupt */
-#define CR_DTEIE        BIT(19) /* enable tx interrupts */
-#define CR_DRFIE        BIT(20) /* enable rx interrupts */
-#define CR_GCD          BIT(21) /* general call disable */
-#define CR_BEIE         BIT(22) /* enable bus error ints */
-#define CR_SADIE        BIT(23) /* slave address detected int enable */
-#define CR_SSDIE        BIT(24) /* slave STOP detected int enable */
-#define CR_MSDIE        BIT(25) /* master STOP detected int enable */
-#define CR_MSDE         BIT(26) /* master STOP detected enable */
-#define CR_TXDONEIE     BIT(27) /* transaction done int enable */
-#define CR_TXEIE        BIT(28) /* transmit FIFO empty int enable */
-#define CR_RXHFIE       BIT(29) /* receive FIFO half-full int enable */
-#define CR_RXFIE        BIT(30) /* receive FIFO full int enable */
-#define CR_RXOVIE       BIT(31) /* receive FIFO overrun int enable */
+ #define CR_START        BIT(0)  /* start bit */
+ #define CR_STOP         BIT(1)  /* stop bit */
+ #define CR_ACKNAK       BIT(2)  /* send ACK(0) or NAK(1) */
+ #define CR_TB           BIT(3)  /* transfer byte bit */
+ #define CR_TXBEGIN      BIT(4)  /* transaction begin */
+ #define CR_FIFOEN       BIT(5)  /* enable FIFO mode */
+ #define CR_GPIOEN       BIT(6)  /* enable GPIO mode for SCL in HS */
+ #define CR_DMAEN        BIT(7)  /* enable DMA for TX and RX FIFOs */
+ #define CR_MODE_FAST    BIT(8)  /* bus mode (master operation) */
+ #define CR_MODE_HIGH    BIT(9)  /* bus mode (master operation) */
+ #define CR_UR           BIT(10) /* unit reset */
+ #define CR_RSTREQ       BIT(11) /* i2c bus reset request */
+ #define CR_MA           BIT(12) /* master abort */
+ #define CR_SCLE         BIT(13) /* master clock enable */
+ #define CR_IUE          BIT(14) /* unit enable */
+ #define CR_HS_STRETCH   BIT(16) /* I2C hs stretch */
+ #define CR_ALDIE        BIT(18) /* enable arbitration interrupt */
+ #define CR_DTEIE        BIT(19) /* enable tx interrupts */
+ #define CR_DRFIE        BIT(20) /* enable rx interrupts */
+ #define CR_GCD          BIT(21) /* general call disable */
+ #define CR_BEIE         BIT(22) /* enable bus error ints */
+ #define CR_SADIE        BIT(23) /* slave address detected int enable */
+ #define CR_SSDIE        BIT(24) /* slave STOP detected int enable */
+ #define CR_MSDIE        BIT(25) /* master STOP detected int enable */
+ #define CR_MSDE         BIT(26) /* master STOP detected enable */
+ #define CR_TXDONEIE     BIT(27) /* transaction done int enable */
+ #define CR_TXEIE        BIT(28) /* transmit FIFO empty int enable */
+ #define CR_RXHFIE       BIT(29) /* receive FIFO half-full int enable */
+ #define CR_RXFIE        BIT(30) /* receive FIFO full int enable */
+ #define CR_RXOVIE       BIT(31) /* receive FIFO overrun int enable */
 
 /* register REG_SR fields */
-#define SR_RWM          BIT(13) /* read/write mode */
-#define SR_ACKNAK       BIT(14) /* ACK/NACK status */
-#define SR_UB           BIT(15) /* unit busy */
-#define SR_IBB          BIT(16) /* i2c bus busy */
-#define SR_EBB          BIT(17) /* early bus busy */
-#define SR_ALD          BIT(18) /* arbitration loss detected */
-#define SR_ITE          BIT(19) /* tx buffer empty */
-#define SR_IRF          BIT(20) /* rx buffer full */
-#define SR_GCAD         BIT(21) /* general call address detected */
-#define SR_BED          BIT(22) /* bus error no ACK/NAK */
-#define SR_SAD          BIT(23) /* slave address detected */
-#define SR_SSD          BIT(24) /* slave stop detected */
-#define SR_MSD          BIT(26) /* master stop detected */
-#define SR_TXDONE       BIT(27) /* transaction done */
-#define SR_TXE          BIT(28) /* tx FIFO empty */
-#define SR_RXHF         BIT(29) /* rx FIFO half-full */
-#define SR_RXF          BIT(30) /* rx FIFO full */
-#define SR_RXOV         BIT(31) /* RX FIFO overrun */
+ #define SR_RWM          BIT(13) /* read/write mode */
+ #define SR_ACKNAK       BIT(14) /* ACK/NACK status */
+ #define SR_UB           BIT(15) /* unit busy */
+ #define SR_IBB          BIT(16) /* i2c bus busy */
+ #define SR_EBB          BIT(17) /* early bus busy */
+ #define SR_ALD          BIT(18) /* arbitration loss detected */
+ #define SR_ITE          BIT(19) /* tx buffer empty */
+ #define SR_IRF          BIT(20) /* rx buffer full */
+ #define SR_GCAD         BIT(21) /* general call address detected */
+ #define SR_BED          BIT(22) /* bus error no ACK/NAK */
+ #define SR_SAD          BIT(23) /* slave address detected */
+ #define SR_SSD          BIT(24) /* slave stop detected */
+ #define SR_MSD          BIT(26) /* master stop detected */
+ #define SR_TXDONE       BIT(27) /* transaction done */
+ #define SR_TXE          BIT(28) /* tx FIFO empty */
+ #define SR_RXHF         BIT(29) /* rx FIFO half-full */
+ #define SR_RXF          BIT(30) /* rx FIFO full */
+ #define SR_RXOV         BIT(31) /* RX FIFO overrun */
 
 /* register REG_LCR fields */
-#define LCR_SLV         0x000001FF  /* SLV: bit[8:0] */
-#define LCR_FLV         0x0003FE00  /* FLV: bit[17:9] */
-#define LCR_HLVH        0x07FC0000  /* HLVH: bit[26:18] */
-#define LCR_HLVL        0xF8000000  /* HLVL: bit[31:27] */
+ #define LCR_SLV         0x000001FF  /* SLV: bit[8:0] */
+ #define LCR_FLV         0x0003FE00  /* FLV: bit[17:9] */
+ #define LCR_HLVH        0x07FC0000  /* HLVH: bit[26:18] */
+ #define LCR_HLVL        0xF8000000  /* HLVL: bit[31:27] */
 
 /* register REG_WCR fields */
-#define WCR_COUNT       0x0000001F  /* COUNT: bit[4:0] */
-#define WCR_COUNT1      0x000003E0  /* HS_COUNT1: bit[9:5] */
-#define WCR_COUNT2      0x00007C00  /* HS_COUNT2: bit[14:10] */
+ #define WCR_COUNT       0x0000001F  /* COUNT: bit[4:0] */
+ #define WCR_COUNT1      0x000003E0  /* HS_COUNT1: bit[9:5] */
+ #define WCR_COUNT2      0x00007C00  /* HS_COUNT2: bit[14:10] */
 
 /* register REG_BMR fields */
-#define BMR_SDA         BIT(0)  /* SDA line level */
-#define BMR_SCL         BIT(1)  /* SCL line level */
+ #define BMR_SDA         BIT(0)  /* SDA line level */
+ #define BMR_SCL         BIT(1)  /* SCL line level */
 
 /* register REG_WFIFO fields */
-#define WFIFO_DATA_MSK      0x000000FF  /* data: bit[7:0] */
-#define WFIFO_CTRL_MSK      0x000003E0  /* control: bit[11:8] */
-#define WFIFO_CTRL_START    BIT(8)      /* start bit */
-#define WFIFO_CTRL_STOP     BIT(9)      /* stop bit */
-#define WFIFO_CTRL_ACKNAK   BIT(10)     /* send ACK(0) or NAK(1) */
-#define WFIFO_CTRL_TB       BIT(11)     /* transfer byte bit */
+ #define WFIFO_DATA_MSK      0x000000FF  /* data: bit[7:0] */
+ #define WFIFO_CTRL_MSK      0x000003E0  /* control: bit[11:8] */
+ #define WFIFO_CTRL_START    BIT(8)      /* start bit */
+ #define WFIFO_CTRL_STOP     BIT(9)      /* stop bit */
+ #define WFIFO_CTRL_ACKNAK   BIT(10)     /* send ACK(0) or NAK(1) */
+ #define WFIFO_CTRL_TB       BIT(11)     /* transfer byte bit */
 
 /* status register init value */
-#define SPACEMIT_I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
-#define SPACEMIT_I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
-                                         CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
-                                         CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
-                                         CR_MSDIE)
+ #define SPACEMIT_I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
+ #define SPACEMIT_I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
+					 CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
+					 CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
+					 CR_MSDIE)
 
 /* i2c bus recover timeout: us */
-#define SPACEMIT_I2C_BUS_RECOVER_TIMEOUT	(100000)
+ #define SPACEMIT_I2C_BUS_RECOVER_TIMEOUT	(100000)
 
-#define SPACEMIT_I2C_FAST_MODE_FREQ		(400000)
+ #define SPACEMIT_I2C_FAST_MODE_FREQ		(400000)
 
 /* i2c-spacemit driver's main struct */
 struct spacemit_i2c_dev {
 	struct device *dev;
 	struct i2c_adapter adapt;
 	struct resource resrc;
+	/* protecting the xfer process */
 	struct mutex mtx;
 
 	/* virtual base address mapped for register */
@@ -143,9 +145,9 @@ struct spacemit_i2c_dev {
 	int msg_num;
 	struct i2c_msg *cur_msg;
 	int msg_idx;
-	/* point cur_msg->buf */
+	/* pointing cur_msg->buf */
 	u8 *msg_buf;
-	/* record the number of messages transmitted */
+	/* recording the number of messages transmitted */
 	size_t count;
 
 	struct completion complete;
@@ -255,7 +257,7 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 		return 0;
 
 	ret = readl_poll_timeout(i2c->mapbase + REG_SR,
-		       		 val,
+				 val,
 				 !(val & (SR_UB | SR_IBB)),
 				 1500,
 				 SPACEMIT_I2C_BUS_RECOVER_TIMEOUT);
@@ -382,10 +384,8 @@ static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c,
 		return 0;
 
 	/* send stop pulse for last byte of last msg */
-	if (i2c->count == 1
-	    && i2c->msg_idx == i2c->msg_num - 1) {
+	if (i2c->count == 1 && i2c->msg_idx == i2c->msg_num - 1)
 		cr_val |= CR_STOP | CR_ACKNAK;
-	}
 
 	/* trigger next byte receive */
 	cr_val |= CR_ALDIE | CR_TB;
@@ -418,8 +418,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *i2c, u32 cr_val)
 	/* trigger next byte receive */
 	if (i2c->count) {
 		/* send stop pulse for last byte of last msg */
-		if (i2c->count == 1
-		    && i2c->msg_idx == i2c->msg_num - 1)
+		if (i2c->count == 1 && i2c->msg_idx == i2c->msg_num - 1)
 			cr_val |= CR_STOP | CR_ACKNAK;
 
 		cr_val |= CR_ALDIE | CR_TB;
@@ -446,8 +445,7 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c, u32 cr_val)
 		i2c->count--;
 
 		/* send stop pulse for last byte of last msg */
-		if (!i2c->count
-		    && i2c->msg_idx == i2c->msg_num - 1)
+		if (!i2c->count && i2c->msg_idx == i2c->msg_num - 1)
 			cr_val |= CR_STOP;
 
 		cr_val |= CR_ALDIE | CR_TB;
@@ -508,8 +506,7 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	if (i2c->status & SR_IRF)
 		ret = spacemit_i2c_read(i2c, cr_val);
 	/* transmited slave addr with read flag */
-	else if ((i2c->status & SR_ITE)
-		 && (i2c->status & SR_RWM))
+	else if ((i2c->status & SR_ITE) && (i2c->status & SR_RWM))
 		ret = spacemit_i2c_ready_read(i2c, cr_val);
 	/* tx empty */
 	else if (i2c->status & SR_ITE)
@@ -520,7 +517,7 @@ err_out:
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (likely(i2c->err || (ret < 0) || (status & SR_MSD))) {
+	if (likely(i2c->err || ret < 0 || (status & SR_MSD))) {
 		/*
 		 * Here the transaction is already done, we don't need any
 		 * other interrupt signals from now, in case any interrupt
@@ -688,8 +685,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	int ret = 0;
 
 	i2c = devm_kzalloc(&pdev->dev,
-				    sizeof(struct spacemit_i2c_dev),
-				    GFP_KERNEL);
+			   sizeof(struct spacemit_i2c_dev),
+			   GFP_KERNEL);
 	if (!i2c)
 		return -ENOMEM;
 
@@ -719,7 +716,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	/* reset the i2c controller */
 	reset_control_assert(i2c->resets);
-	udelay(200);
+	udelay_range(200, 300);
 	reset_control_deassert(i2c->resets);
 
 	i2c->irq = platform_get_irq(pdev, 0);
@@ -730,17 +727,17 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	}
 
 	ret = devm_request_irq(i2c->dev, i2c->irq,
-			     spacemit_i2c_int_handler,
-			     IRQF_NO_SUSPEND | IRQF_ONESHOT,
-			     dev_name(i2c->dev), i2c);
+			       spacemit_i2c_int_handler,
+			       IRQF_NO_SUSPEND | IRQF_ONESHOT,
+			       dev_name(i2c->dev), i2c);
 	if (ret) {
 		dev_err(i2c->dev, "failed to request irq\n");
 		return ret;
 	}
 	disable_irq(i2c->irq);
-	
+
 	devm_clk_get_enabled(&pdev->dev, NULL);
-	
+
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
 	i2c->adapt.algo = &spacemit_i2c_algrtm;
