@@ -375,6 +375,10 @@ static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *i2c)
 static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c,
 				   u32 cr_val)
 {
+	/* MSD comes with ITE */
+	if (i2c->status & SR_MSD)
+		return ret;
+
 	/* send stop pulse for last byte of last msg */
 	if (i2c->count == 1
 	    && i2c->msg_idx == i2c->num - 1) {
