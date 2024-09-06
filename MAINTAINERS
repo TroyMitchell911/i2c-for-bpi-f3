@@ -1,0 +1,6 @@
+^S[^:]
+SPACEMIT I2C DRIVER
+M:	Troy Mitchell <troymitchell988@gmail.com>
+S:	Maintained
+F:	drivers/i2c/busses/i2c-k1.c
+
