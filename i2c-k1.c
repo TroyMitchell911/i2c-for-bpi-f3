@@ -130,8 +130,6 @@
 struct spacemit_i2c_dev {
 	struct device *dev;
 	struct i2c_adapter adapt;
-	struct i2c_msg *msgs;
-	int num;
 	struct resource resrc;
 	struct mutex mtx;
 
@@ -141,9 +139,13 @@ struct spacemit_i2c_dev {
 	struct reset_control *resets;
 	int irq;
 
+	struct i2c_msg *msgs;
+	int msg_num;
 	struct i2c_msg *cur_msg;
 	int msg_idx;
+	/* point cur_msg->buf */
 	u8 *msg_buf;
+	/* record the number of messages transmitted */
 	size_t count;
 
 	struct completion complete;
@@ -359,7 +361,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->msg_idx == i2c->num - 1)
+	if (i2c->msg_idx == i2c->msg_num - 1)
 		return 0;
 
 	i2c->msg_idx++;
@@ -377,11 +379,11 @@ static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c,
 {
 	/* MSD comes with ITE */
 	if (i2c->status & SR_MSD)
-		return ret;
+		return 0;
 
 	/* send stop pulse for last byte of last msg */
 	if (i2c->count == 1
-	    && i2c->msg_idx == i2c->num - 1) {
+	    && i2c->msg_idx == i2c->msg_num - 1) {
 		cr_val |= CR_STOP | CR_ACKNAK;
 	}
 
@@ -417,12 +419,12 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *i2c, u32 cr_val)
 	if (i2c->count) {
 		/* send stop pulse for last byte of last msg */
 		if (i2c->count == 1
-		    && i2c->msg_idx == i2c->num - 1)
+		    && i2c->msg_idx == i2c->msg_num - 1)
 			cr_val |= CR_STOP | CR_ACKNAK;
 
 		cr_val |= CR_ALDIE | CR_TB;
 		spacemit_i2c_write_reg(i2c, REG_CR, cr_val);
-	} else if (i2c->msg_idx < i2c->num - 1) {
+	} else if (i2c->msg_idx < i2c->msg_num - 1) {
 		ret = spacemit_i2c_xfer_next_msg(i2c);
 	}
 
@@ -445,12 +447,12 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c, u32 cr_val)
 
 		/* send stop pulse for last byte of last msg */
 		if (!i2c->count
-		    && i2c->msg_idx == i2c->num - 1)
+		    && i2c->msg_idx == i2c->msg_num - 1)
 			cr_val |= CR_STOP;
 
 		cr_val |= CR_ALDIE | CR_TB;
 		spacemit_i2c_write_reg(i2c, REG_CR, cr_val);
-	} else if (i2c->msg_idx < i2c->num - 1) {
+	} else if (i2c->msg_idx < i2c->msg_num - 1) {
 		ret = spacemit_i2c_xfer_next_msg(i2c);
 	}
 
@@ -544,7 +546,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	unsigned long timeout;
 	int idx = 0, cnt = 0, freq;
 
-	while (idx < i2c->num) {
+	while (idx < i2c->msg_num) {
 		cnt += (i2c->msgs + idx)->len + 1;
 
 		idx++;
@@ -633,7 +635,7 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 
 	mutex_lock(&i2c->mtx);
 	i2c->msgs = msgs;
-	i2c->num = num;
+	i2c->msg_num = num;
 
 xfer_retry:
 	ret = spacemit_i2c_xfer_core(i2c);
