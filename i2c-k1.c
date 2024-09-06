@@ -266,11 +266,14 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 	int ret = 0;
 	u32 val;
 
-	if (likely
-	    (!(spacemit_i2c_read_reg(i2c, REG_SR) & (SR_UB | SR_IBB))))
+	if (likely(!(spacemit_i2c_read_reg(i2c, REG_SR) & (SR_UB | SR_IBB))))
 		return 0;
 
-	ret = readl_poll_timeout(i2c->mapbase + REG_SR, val, !(val & (SR_UB | SR_IBB)), 1500, SPACEMIT_I2C_BUS_RECOVER_TIMEOUT);
+	ret = readl_poll_timeout(i2c->mapbase + REG_SR,
+		       		 val,
+				 !(val & (SR_UB | SR_IBB)),
+				 1500,
+				 SPACEMIT_I2C_BUS_RECOVER_TIMEOUT);
 	if (unlikely(ret)) {
 		spacemit_i2c_reset(i2c);
 		ret = -EAGAIN;
@@ -711,8 +714,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	i2c->mapbase =
-	    devm_ioremap_resource(i2c->dev, &i2c->resrc);
+	i2c->mapbase = devm_ioremap_resource(i2c->dev, &i2c->resrc);
 	if (IS_ERR(i2c->mapbase)) {
 		dev_err(&pdev->dev, "failed to do ioremap\n");
 		ret = PTR_ERR(i2c->mapbase);
@@ -738,8 +740,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret =
-	    devm_request_irq(i2c->dev, i2c->irq,
+	ret = devm_request_irq(i2c->dev, i2c->irq,
 			     spacemit_i2c_int_handler,
 			     IRQF_NO_SUSPEND | IRQF_ONESHOT,
 			     dev_name(i2c->dev), i2c);
