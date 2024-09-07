@@ -30,7 +30,6 @@ additionalProperties: false
 required:
   - compatible
   - reg
-  - interrupt-parent
   - interrupts
   - resets
   - clocks
@@ -40,9 +39,7 @@ examples:
     i2c0: i2c@d4010800 {
         compatible = "spacemit,k1-i2c";
         reg = <0x0 0xd4010800 0x0 0x38>;
-        #address-cells = <1>;
-        #size-cells = <0>;
-        interrupt-parent = <&intc>;
+        interrupt-parent = <&plic>;
         interrupts = <36>;
         clocks = <&ccu 90>;
         resets = <&reset 27>;
