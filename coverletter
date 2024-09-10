@@ -1,4 +1,4 @@
-i2c: spacemit: add support to k1 SoC
+riscv: spacemit: add i2c support to k1 SoC
 
 Hi all,
 
@@ -12,4 +12,3 @@ Future work may include adding DMA support and fast-mode support
 of the driver.
 
 Link: https://developer.spacemit.com/documentation?token=Rn9Kw3iFHirAMgkIpTAcV2Arnkf#part5 [1]
-
