@@ -8,7 +8,7 @@ compatible with standard I2C bus specifications.
 
 The docs of I2C can be found here, in chapter 16.1 I2C [1]
 
-Future work may include adding DMA support and fast-mode support
+Future work may include adding DMA support and high-speed-mode support
 of the driver.
 
 Link: https://developer.spacemit.com/documentation?token=Rn9Kw3iFHirAMgkIpTAcV2Arnkf#part5 [1]
