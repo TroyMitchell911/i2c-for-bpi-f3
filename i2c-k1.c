@@ -335,7 +335,6 @@ spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *i2c)
 	else
 		slave_addr_rw = (i2c->cur_msg->addr & 0x7f) << 1;
 
-	/* write slave address to DBR for interrupt mode */
 	spacemit_i2c_write_reg(i2c, REG_DBR, slave_addr_rw);
 
 	spacemit_i2c_trigger_byte_xfer(i2c);
@@ -343,7 +342,6 @@ spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 {
-	/* i2c error occurs */
 	if (unlikely(i2c->err))
 		return -1;
 
@@ -371,7 +369,6 @@ static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *i2c)
 static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c,
 				   u32 cr_val)
 {
-	/* MSD comes with ITE */
 	if (i2c->status & SR_MSD)
 		return 0;
 
@@ -426,7 +423,6 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c, u32 cr_val)
 {
 	int ret = 0;
 
-	/* MSD comes with ITE */
 	if (i2c->status & SR_MSD)
 		return ret;
 
@@ -541,7 +537,6 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 		idx++;
 	}
 
-	/* fast mode */
 	freq = SPACEMIT_I2C_FAST_MODE_FREQ;
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
@@ -550,7 +545,6 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_init_xfer_params(struct spacemit_i2c_dev *i2c)
 {
-	/* initialize transfer parameters */
 	i2c->msg_idx = 0;
 	i2c->cur_msg = i2c->msgs;
 	i2c->msg_buf = i2c->cur_msg->buf;
@@ -567,7 +561,6 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	if (unlikely
 	    (spacemit_i2c_read_reg(i2c, REG_CR) !=
 	     i2c->ctrl_reg_value))
-		/* i2c controller & bus reset */
 		spacemit_i2c_reset(i2c);
 
 	spacemit_i2c_calc_timeout(i2c);
