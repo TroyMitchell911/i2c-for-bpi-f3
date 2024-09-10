@@ -707,7 +707,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	/* reset the i2c controller */
 	reset_control_assert(i2c->resets);
-	udelay_range(200, 300);
+	usleep_range(200, 300);
 	reset_control_deassert(i2c->resets);
 
 	i2c->irq = platform_get_irq(pdev, 0);
