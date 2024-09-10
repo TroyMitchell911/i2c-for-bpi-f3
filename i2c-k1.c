@@ -686,45 +686,38 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	mutex_init(&i2c->mtx);
 
 	ret = of_address_to_resource(of_node, 0, &i2c->resrc);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to get resource\n");
-		return -ENODEV;
-	}
+	if (ret)
+		return dev_err_probe(&pdev->dev, -ENODEV, "failed to get resource");
 
 	i2c->mapbase = devm_ioremap_resource(i2c->dev, &i2c->resrc);
 	if (IS_ERR(i2c->mapbase)) {
-		dev_err(&pdev->dev, "failed to do ioremap\n");
 		ret = PTR_ERR(i2c->mapbase);
-		return ret;
+		return dev_err_probe(&pdev->dev, ret, "failed to do ioremap");
 	}
 
 	i2c->resets = devm_reset_control_get(&pdev->dev, NULL);
 	if (IS_ERR(i2c->resets)) {
-		dev_err(&pdev->dev, "failed to get resets\n");
 		ret = PTR_ERR(i2c->resets);
-		return ret;
+		return dev_err_probe(&pdev->dev, ret, "failed to get resets");
 	}
 
-	/* reset the i2c controller */
 	reset_control_assert(i2c->resets);
 	usleep_range(200, 300);
 	reset_control_deassert(i2c->resets);
 
 	i2c->irq = platform_get_irq(pdev, 0);
 	if (i2c->irq < 0) {
-		dev_err(i2c->dev, "failed to get irq resource\n");
 		ret = i2c->irq;
-		return ret;
+		return dev_err_probe(&pdev->dev, ret, "failed to get irq resource");
 	}
 
 	ret = devm_request_irq(i2c->dev, i2c->irq,
 			       spacemit_i2c_int_handler,
 			       IRQF_NO_SUSPEND | IRQF_ONESHOT,
 			       dev_name(i2c->dev), i2c);
-	if (ret) {
-		dev_err(i2c->dev, "failed to request irq\n");
-		return ret;
-	}
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret, "failed to request irq");
+	
 	disable_irq(i2c->irq);
 
 	devm_clk_get_enabled(&pdev->dev, NULL);
@@ -745,10 +738,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	init_completion(&i2c->complete);
 
 	ret = i2c_add_numbered_adapter(&i2c->adapt);
-	if (ret) {
-		dev_err(i2c->dev, "failed to add i2c adapter\n");
-		return ret;
-	}
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret, "failed to add i2c adapter");
 
 	platform_set_drvdata(pdev, i2c);
 	return 0;
