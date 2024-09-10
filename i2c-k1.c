@@ -629,13 +629,10 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 
 xfer_retry:
 	ret = spacemit_i2c_xfer_core(i2c);
-	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN)))
-		goto err_recover;
 
 	if (likely(!ret))
 		spacemit_i2c_check_bus_release(i2c);
 
-err_recover:
 	disable_irq(i2c->irq);
 
 	spacemit_i2c_disable(i2c);
