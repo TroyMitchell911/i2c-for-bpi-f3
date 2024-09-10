@@ -194,7 +194,7 @@ static void spacemit_i2c_flush_fifo_buffer(struct spacemit_i2c_dev
 	spacemit_i2c_write_reg(i2c, REG_RFIFO_RPTR, 0);
 }
 
-static void spacemit_i2c_controller_reset(struct spacemit_i2c_dev *i2c)
+static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 {
 	spacemit_i2c_write_reg(i2c, REG_CR, CR_UR);
 	udelay(5);
@@ -209,7 +209,7 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 	/* if bus is locked, reset unit. 0: locked */
 	bus_status = spacemit_i2c_read_reg(i2c, REG_BMR);
 	if (!(bus_status & BMR_SDA) || !(bus_status & BMR_SCL)) {
-		spacemit_i2c_controller_reset(i2c);
+		spacemit_i2c_reset(i2c);
 		usleep_range(10, 20);
 
 		/* check scl status again */
@@ -238,11 +238,6 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 	else
 		dev_alert(i2c->dev, "bus reset, send clk: %d\n",
 			  clk_cnt);
-}
-
-static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
-{
-	spacemit_i2c_controller_reset(i2c);
 }
 
 static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
