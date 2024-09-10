@@ -25,7 +25,7 @@ properties:
   clocks:
     maxItems: 1
 
-additionalProperties: false
+unevaluatedProperties: false
 
 required:
   - compatible
