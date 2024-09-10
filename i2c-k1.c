@@ -187,18 +187,15 @@ static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_flush_fifo_buffer(struct spacemit_i2c_dev
 					   *i2c)
 {
-	/* flush REG_WFIFO_WPTR and REG_WFIFO_RPTR */
 	spacemit_i2c_write_reg(i2c, REG_WFIFO_WPTR, 0);
 	spacemit_i2c_write_reg(i2c, REG_WFIFO_RPTR, 0);
 
-	/* flush REG_RFIFO_WPTR and REG_RFIFO_RPTR */
 	spacemit_i2c_write_reg(i2c, REG_RFIFO_WPTR, 0);
 	spacemit_i2c_write_reg(i2c, REG_RFIFO_RPTR, 0);
 }
 
 static void spacemit_i2c_controller_reset(struct spacemit_i2c_dev *i2c)
 {
-	/* i2c controller reset */
 	spacemit_i2c_write_reg(i2c, REG_CR, CR_UR);
 	udelay(5);
 	spacemit_i2c_write_reg(i2c, REG_CR, 0);
@@ -690,7 +687,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (!i2c)
 		return -ENOMEM;
 
-	dev_err(&pdev->dev, "pdev->id: %d\n", pdev->id);
 	i2c->dev = &pdev->dev;
 	mutex_init(&i2c->mtx);
 
@@ -744,7 +740,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	i2c->adapt.dev.parent = i2c->dev;
 	i2c->adapt.nr = pdev->id;
 
-	/* this is for the very low occasionally PMIC i2c access failure. */
 	i2c->adapt.retries = 3;
 
 	i2c->adapt.dev.of_node = of_node;
@@ -761,7 +756,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, i2c);
-	dev_dbg(i2c->dev, "driver probe success");
 	return 0;
 }
 
@@ -775,7 +769,6 @@ static int spacemit_i2c_remove(struct platform_device *pdev)
 
 	reset_control_assert(i2c->resets);
 
-	dev_dbg(i2c->dev, "driver removed\n");
 	return 0;
 }
 
@@ -798,4 +791,4 @@ static struct platform_driver spacemit_i2c_driver = {
 module_platform_driver(spacemit_i2c_driver);
 
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("i2c driver for k1 of spacemit SoCs");
+MODULE_DESCRIPTION("i2c driver for K1 of SpacemiT SoCs");
