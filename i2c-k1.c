@@ -132,6 +132,7 @@ struct spacemit_i2c_dev {
 	struct device *dev;
 	struct i2c_adapter adapt;
 	struct resource resrc;
+	struct clk *clk;
 	/* protecting the xfer process */
 	struct mutex mtx;
 
@@ -720,7 +721,11 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	
 	disable_irq(i2c->irq);
 
-	devm_clk_get_enabled(&pdev->dev, NULL);
+	i2c->clk = devm_clk_get_enabled(&pdev->dev, NULL);
+	if(IS_ERR(i2c->clk)) {
+		ret = PTR_ERR(i2c->clk);
+		return dev_err_probe(&pdev->dev, ret, "failed to enable clock");
+	}
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
