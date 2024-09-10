@@ -1,3 +1,5 @@
+riscv: spacemit: add i2c support to k1 SoC
+
 Hi all,
 
 This patch implements I2C driver for the SpacemiT K1 SoC,
