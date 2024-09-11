@@ -164,8 +164,7 @@ static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
 {
 	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, ICR);
        	i2c->ctrl_reg_value &= ~CR_IUE;
-	spacemit_i2c_write_reg(i2c, ICR,
-			       i2c->ctrl_reg_value);
+	spacemit_i2c_write_reg(i2c, ICR, i2c->ctrl_reg_value);
 }
 
 static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
@@ -183,12 +182,14 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 
 	/* if bus is locked, reset unit. 0: locked */
 	status = spacemit_i2c_read_reg(i2c, IBMR);
+
 	if (!(status & BMR_SDA) || !(status & BMR_SCL)) {
 		spacemit_i2c_reset(i2c);
 		usleep_range(10, 20);
 
 		/* check scl status again */
 		status = spacemit_i2c_read_reg(i2c, IBMR);
+
 		if (!(status & BMR_SCL))
 			dev_alert(i2c->dev, "unit reset failed\n");
 	}
@@ -196,6 +197,7 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 	while (clk_cnt < 9) {
 		/* check whether the SDA is still locked by slave */
 		status = spacemit_i2c_read_reg(i2c, IBMR);
+
 		if (status & BMR_SDA)
 			break;
 
@@ -207,12 +209,11 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 	}
 
 	status = spacemit_i2c_read_reg(i2c, IBMR);
+
 	if (clk_cnt >= 9 && !(status & BMR_SDA))
-		dev_alert(i2c->dev,
-			  "bus reset clk reaches the max 9-clocks\n");
+		dev_alert(i2c->dev, "bus reset clk reaches the max 9-clocks\n");
 	else
-		dev_alert(i2c->dev, "bus reset, send clk: %d\n",
-			  clk_cnt);
+		dev_alert(i2c->dev, "bus reset, send clk: %d\n", clk_cnt);
 }
 
 static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
@@ -224,10 +225,11 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 		return 0;
 
 	ret = readl_poll_timeout(i2c->base + ISR,
-							 val,
-							 !(val & (SR_UB | SR_IBB)),
-							 1500,
-							 I2C_BUS_RECOVER_TIMEOUT);
+				 val,
+				 !(val & (SR_UB | SR_IBB)),
+				 1500,
+				 I2C_BUS_RECOVER_TIMEOUT);
+
 	if (unlikely(ret)) {
 		spacemit_i2c_reset(i2c);
 		ret = -EAGAIN;
@@ -294,8 +296,7 @@ static void spacemit_i2c_trigger_byte_xfer(struct spacemit_i2c_dev *i2c)
 static inline void
 spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 {
-	spacemit_i2c_write_reg(i2c, ISR,
-			       mask & I2C_INT_STATUS_MASK);
+	spacemit_i2c_write_reg(i2c, ISR, mask & I2C_INT_STATUS_MASK);
 }
 
 static void
@@ -367,8 +368,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *i2c, u32 cr_val)
 	int ret = 0;
 
 	if (i2c->count) {
-		*i2c->msg_buf++ =
-		    spacemit_i2c_read_reg(i2c, IDBR);
+		*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
 		i2c->count--;
 	}
 
@@ -383,6 +383,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *i2c, u32 cr_val)
 			cr_val |= CR_STOP | CR_ACKNAK;
 
 		cr_val |= CR_ALDIE | CR_TB;
+
 		spacemit_i2c_write_reg(i2c, ICR, cr_val);
 	} else if (i2c->msg_idx < i2c->msg_num - 1) {
 		ret = spacemit_i2c_xfer_next_msg(i2c);
@@ -408,6 +409,7 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c, u32 cr_val)
 			cr_val |= CR_STOP;
 
 		cr_val |= CR_ALDIE | CR_TB;
+
 		spacemit_i2c_write_reg(i2c, ICR, cr_val);
 	} else if (i2c->msg_idx < i2c->msg_num - 1) {
 		ret = spacemit_i2c_xfer_next_msg(i2c);
@@ -510,6 +512,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	freq = I2C_FAST_MODE_FREQ;
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
+
 	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2);
 }
 
@@ -626,8 +629,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	int ret = 0;
 
 	i2c = devm_kzalloc(&pdev->dev,
-					   sizeof(struct spacemit_i2c_dev),
-					   GFP_KERNEL);
+			   sizeof(struct spacemit_i2c_dev),
+			   GFP_KERNEL);
 	if (!i2c)
 		return -ENOMEM;
 
@@ -681,8 +684,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	i2c->adapt.dev.of_node = of_node;
 	i2c->adapt.algo_data = i2c;
 
-	strscpy(i2c->adapt.name, "spacemit-i2c-adapter",
-		sizeof(i2c->adapt.name));
+	strscpy(i2c->adapt.name, "spacemit-i2c-adapter", sizeof(i2c->adapt.name));
 
 	init_completion(&i2c->complete);
 
