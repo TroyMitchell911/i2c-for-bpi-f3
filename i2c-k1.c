@@ -13,22 +13,22 @@
  #include <linux/reset.h>
 
 /* spacemit i2c registers */
- #define REG_CR          0x0     /* Control Register */
- #define REG_SR          0x4     /* Status Register */
- #define REG_SAR         0x8     /* Slave Address Register */
- #define REG_DBR         0xc     /* Data Buffer Register */
- #define REG_LCR         0x10    /* Load Count Register */
- #define REG_WCR         0x14    /* Wait Count Register */
- #define REG_RST_CYC     0x18    /* Bus reset cycle counter */
- #define REG_BMR         0x1c    /* Bus monitor register */
- #define REG_WFIFO       0x20    /* Write FIFO Register */
- #define REG_WFIFO_WPTR  0x24    /* Write FIFO Write Pointer Register */
- #define REG_WFIFO_RPTR  0x28    /* Write FIFO Read Pointer Register */
- #define REG_RFIFO       0x2c    /* Read FIFO Register */
- #define REG_RFIFO_WPTR  0x30    /* Read FIFO Write Pointer Register */
- #define REG_RFIFO_RPTR  0x34    /* Read FIFO Read Pointer Register */
+ #define ICR          0x0     /* Control Register */
+ #define ISR          0x4     /* Status Register */
+ #define ISAR         0x8     /* Slave Address Register */
+ #define IDBR         0xc     /* Data Buffer Register */
+ #define ILCR         0x10    /* Load Count Register */
+ #define IWCR         0x14    /* Wait Count Register */
+ #define IRST_CYC     0x18    /* Bus reset cycle counter */
+ #define IBMR         0x1c    /* Bus monitor register */
+ #define IWFIFO       0x20    /* Write FIFO Register */
+ #define IWFIFO_WPTR  0x24    /* Write FIFO Write Pointer Register */
+ #define IWFIFO_RPTR  0x28    /* Write FIFO Read Pointer Register */
+ #define IRFIFO       0x2c    /* Read FIFO Register */
+ #define IRFIFO_WPTR  0x30    /* Read FIFO Write Pointer Register */
+ #define IRFIFO_RPTR  0x34    /* Read FIFO Read Pointer Register */
 
-/* register REG_CR fields */
+/* register ICR fields */
  #define CR_START        BIT(0)  /* start bit */
  #define CR_STOP         BIT(1)  /* stop bit */
  #define CR_ACKNAK       BIT(2)  /* send ACK(0) or NAK(1) */
@@ -60,7 +60,7 @@
  #define CR_RXFIE        BIT(30) /* receive FIFO full int enable */
  #define CR_RXOVIE       BIT(31) /* receive FIFO overrun int enable */
 
-/* register REG_SR fields */
+/* register ISR fields */
  #define SR_RWM          BIT(13) /* read/write mode */
  #define SR_ACKNAK       BIT(14) /* ACK/NACK status */
  #define SR_UB           BIT(15) /* unit busy */
@@ -80,22 +80,22 @@
  #define SR_RXF          BIT(30) /* rx FIFO full */
  #define SR_RXOV         BIT(31) /* RX FIFO overrun */
 
-/* register REG_LCR fields */
+/* register ILCR fields */
  #define LCR_SLV         0x000001FF  /* SLV: bit[8:0] */
  #define LCR_FLV         0x0003FE00  /* FLV: bit[17:9] */
  #define LCR_HLVH        0x07FC0000  /* HLVH: bit[26:18] */
  #define LCR_HLVL        0xF8000000  /* HLVL: bit[31:27] */
 
-/* register REG_WCR fields */
+/* register IWCR fields */
  #define WCR_COUNT       0x0000001F  /* COUNT: bit[4:0] */
  #define WCR_COUNT1      0x000003E0  /* HS_COUNT1: bit[9:5] */
  #define WCR_COUNT2      0x00007C00  /* HS_COUNT2: bit[14:10] */
 
-/* register REG_BMR fields */
+/* register IBMR fields */
  #define BMR_SDA         BIT(0)  /* SDA line level */
  #define BMR_SCL         BIT(1)  /* SCL line level */
 
-/* register REG_WFIFO fields */
+/* register IWFIFO fields */
  #define WFIFO_DATA_MSK      0x000000FF  /* data: bit[7:0] */
  #define WFIFO_CTRL_MSK      0x000003E0  /* control: bit[11:8] */
  #define WFIFO_CTRL_START    BIT(8)      /* start bit */
@@ -158,24 +158,24 @@ spacemit_i2c_write_reg(struct spacemit_i2c_dev *i2c, int reg, u32 val)
 
 static void spacemit_i2c_enable(struct spacemit_i2c_dev *i2c)
 {
-	u32 cr_val = spacemit_i2c_read_reg(i2c, REG_CR);
-	spacemit_i2c_write_reg(i2c, REG_CR, cr_val | CR_IUE);
+	u32 cr_val = spacemit_i2c_read_reg(i2c, ICR);
+	spacemit_i2c_write_reg(i2c, ICR, cr_val | CR_IUE);
 }
 
 static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
 {
-	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, REG_CR);
+	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, ICR);
        	i2c->ctrl_reg_value &= ~CR_IUE;
-	spacemit_i2c_write_reg(i2c, REG_CR,
+	spacemit_i2c_write_reg(i2c, ICR,
 			       i2c->ctrl_reg_value);
 }
 
 static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 {
-	spacemit_i2c_write_reg(i2c, REG_CR, CR_UR);
+	spacemit_i2c_write_reg(i2c, ICR, CR_UR);
 	udelay(5);
-	spacemit_i2c_write_reg(i2c, REG_CR, 0);
-	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, REG_CR);
+	spacemit_i2c_write_reg(i2c, ICR, 0);
+	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, ICR);
 }
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
@@ -184,31 +184,31 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 	u32 bus_status;
 
 	/* if bus is locked, reset unit. 0: locked */
-	bus_status = spacemit_i2c_read_reg(i2c, REG_BMR);
+	bus_status = spacemit_i2c_read_reg(i2c, IBMR);
 	if (!(bus_status & BMR_SDA) || !(bus_status & BMR_SCL)) {
 		spacemit_i2c_reset(i2c);
 		usleep_range(10, 20);
 
 		/* check scl status again */
-		bus_status = spacemit_i2c_read_reg(i2c, REG_BMR);
+		bus_status = spacemit_i2c_read_reg(i2c, IBMR);
 		if (!(bus_status & BMR_SCL))
 			dev_alert(i2c->dev, "unit reset failed\n");
 	}
 
 	while (clk_cnt < 9) {
 		/* check whether the SDA is still locked by slave */
-		bus_status = spacemit_i2c_read_reg(i2c, REG_BMR);
+		bus_status = spacemit_i2c_read_reg(i2c, IBMR);
 		if (bus_status & BMR_SDA)
 			break;
 
 		/* if still locked, send one clk to slave to request release */
-		spacemit_i2c_write_reg(i2c, REG_RST_CYC, 0x1);
-		spacemit_i2c_write_reg(i2c, REG_CR, CR_RSTREQ);
+		spacemit_i2c_write_reg(i2c, IRST_CYC, 0x1);
+		spacemit_i2c_write_reg(i2c, ICR, CR_RSTREQ);
 		usleep_range(20, 30);
 		clk_cnt++;
 	}
 
-	bus_status = spacemit_i2c_read_reg(i2c, REG_BMR);
+	bus_status = spacemit_i2c_read_reg(i2c, IBMR);
 	if (clk_cnt >= 9 && !(bus_status & BMR_SDA))
 		dev_alert(i2c->dev,
 			  "bus reset clk reaches the max 9-clocks\n");
@@ -222,10 +222,10 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 	int ret = 0;
 	u32 val;
 
-	if (likely(!(spacemit_i2c_read_reg(i2c, REG_SR) & (SR_UB | SR_IBB))))
+	if (likely(!(spacemit_i2c_read_reg(i2c, ISR) & (SR_UB | SR_IBB))))
 		return 0;
 
-	ret = readl_poll_timeout(i2c->mapbase + REG_SR,
+	ret = readl_poll_timeout(i2c->mapbase + ISR,
 				 val,
 				 !(val & (SR_UB | SR_IBB)),
 				 1500,
@@ -242,7 +242,7 @@ static void spacemit_i2c_check_bus_release(struct spacemit_i2c_dev
 					   *i2c)
 {
 	/* in case bus is not released after transfer completes */
-	if (unlikely(spacemit_i2c_read_reg(i2c, REG_SR) & SR_EBB)) {
+	if (unlikely(spacemit_i2c_read_reg(i2c, ISR) & SR_EBB)) {
 		spacemit_i2c_bus_reset(i2c);
 		usleep_range(90, 150);
 	}
@@ -281,24 +281,24 @@ static void spacemit_i2c_unit_init(struct spacemit_i2c_dev *i2c)
 	/* enable master stop detected */
 	cr_val |= CR_MSDE | CR_MSDIE;
 
-	spacemit_i2c_write_reg(i2c, REG_CR, cr_val);
+	spacemit_i2c_write_reg(i2c, ICR, cr_val);
 }
 
 static void spacemit_i2c_trigger_byte_xfer(struct spacemit_i2c_dev
 					   *i2c)
 {
-	u32 cr_val = spacemit_i2c_read_reg(i2c, REG_CR);
+	u32 cr_val = spacemit_i2c_read_reg(i2c, ICR);
 
 	/* send start pulse */
 	cr_val &= ~CR_STOP;
 	cr_val |= CR_START | CR_TB | CR_DTEIE;
-	spacemit_i2c_write_reg(i2c, REG_CR, cr_val);
+	spacemit_i2c_write_reg(i2c, ICR, cr_val);
 }
 
 static inline void
 spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 {
-	spacemit_i2c_write_reg(i2c, REG_SR,
+	spacemit_i2c_write_reg(i2c, ISR,
 			       mask & SPACEMIT_I2C_INT_STATUS_MASK);
 }
 
@@ -312,7 +312,7 @@ spacemit_i2c_byte_xfer_send_slave_addr(struct spacemit_i2c_dev *i2c)
 	else
 		slave_addr_rw = (i2c->cur_msg->addr & 0x7f) << 1;
 
-	spacemit_i2c_write_reg(i2c, REG_DBR, slave_addr_rw);
+	spacemit_i2c_write_reg(i2c, IDBR, slave_addr_rw);
 
 	spacemit_i2c_trigger_byte_xfer(i2c);
 }
@@ -362,7 +362,7 @@ static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c,
 	 * next expected is receive full interrupt signal.
 	 */
 	cr_val &= ~CR_DTEIE;
-	spacemit_i2c_write_reg(i2c, REG_CR, cr_val);
+	spacemit_i2c_write_reg(i2c, ICR, cr_val);
 
 	return 0;
 }
@@ -373,7 +373,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *i2c, u32 cr_val)
 
 	if (i2c->count) {
 		*i2c->msg_buf++ =
-		    spacemit_i2c_read_reg(i2c, REG_DBR);
+		    spacemit_i2c_read_reg(i2c, IDBR);
 		i2c->count--;
 	}
 
@@ -388,7 +388,7 @@ static int spacemit_i2c_read(struct spacemit_i2c_dev *i2c, u32 cr_val)
 			cr_val |= CR_STOP | CR_ACKNAK;
 
 		cr_val |= CR_ALDIE | CR_TB;
-		spacemit_i2c_write_reg(i2c, REG_CR, cr_val);
+		spacemit_i2c_write_reg(i2c, ICR, cr_val);
 	} else if (i2c->msg_idx < i2c->msg_num - 1) {
 		ret = spacemit_i2c_xfer_next_msg(i2c);
 	}
@@ -404,7 +404,7 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c, u32 cr_val)
 		return ret;
 
 	if (i2c->count) {
-		spacemit_i2c_write_reg(i2c, REG_DBR,
+		spacemit_i2c_write_reg(i2c, IDBR,
 				       *i2c->msg_buf++);
 
 		i2c->count--;
@@ -414,7 +414,7 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c, u32 cr_val)
 			cr_val |= CR_STOP;
 
 		cr_val |= CR_ALDIE | CR_TB;
-		spacemit_i2c_write_reg(i2c, REG_CR, cr_val);
+		spacemit_i2c_write_reg(i2c, ICR, cr_val);
 	} else if (i2c->msg_idx < i2c->msg_num - 1) {
 		ret = spacemit_i2c_xfer_next_msg(i2c);
 	}
@@ -444,7 +444,7 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	u32 status, ctrl, cr_val;
 	int ret = 0;
 
-	status = spacemit_i2c_read_reg(i2c, REG_SR);
+	status = spacemit_i2c_read_reg(i2c, ISR);
 	i2c->status = status;
 
 	/* check if a valid interrupt status */
@@ -460,7 +460,7 @@ static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
 	if (unlikely(i2c->err))
 		goto err_out;
 
-	cr_val = spacemit_i2c_read_reg(i2c, REG_CR);
+	cr_val = spacemit_i2c_read_reg(i2c, ICR);
 
 	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
 
@@ -487,9 +487,9 @@ err_out:
 		 * we mask all the interrupt signals and clear the interrupt
 		 * status.
 		 */
-		ctrl = spacemit_i2c_read_reg(i2c, REG_CR);
+		ctrl = spacemit_i2c_read_reg(i2c, ICR);
 		ctrl &= ~SPACEMIT_I2C_INT_CTRL_MASK;
-		spacemit_i2c_write_reg(i2c, REG_CR, ctrl);
+		spacemit_i2c_write_reg(i2c, ICR, ctrl);
 
 		spacemit_i2c_clear_int_status(i2c,
 					      SPACEMIT_I2C_INT_STATUS_MASK);
@@ -533,7 +533,7 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 
 	/* if unit keeps the last control status, don't need to do reset */
 	if (unlikely
-	    (spacemit_i2c_read_reg(i2c, REG_CR) !=
+	    (spacemit_i2c_read_reg(i2c, ICR) !=
 	     i2c->ctrl_reg_value))
 		spacemit_i2c_reset(i2c);
 
