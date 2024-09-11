@@ -186,6 +186,7 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 	spacemit_i2c_write_reg(i2c, REG_CR, CR_UR);
 	udelay(5);
 	spacemit_i2c_write_reg(i2c, REG_CR, 0);
+	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, REG_CR);
 }
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
