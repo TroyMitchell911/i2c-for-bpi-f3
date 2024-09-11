@@ -165,8 +165,8 @@ static void spacemit_i2c_enable(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
 {
-	i2c->ctrl_reg_value =
-	    spacemit_i2c_read_reg(i2c, REG_CR) & ~CR_IUE;
+	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, REG_CR);
+       	i2c->ctrl_reg_value &= ~CR_IUE;
 	spacemit_i2c_write_reg(i2c, REG_CR,
 			       i2c->ctrl_reg_value);
 }
