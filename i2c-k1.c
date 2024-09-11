@@ -589,8 +589,7 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 		dev_alert(i2c->dev, "msg completion timeout\n");
 		spacemit_i2c_bus_reset(i2c);
 		spacemit_i2c_reset(i2c);
-		ret = -ETIMEDOUT;
-		return ret;
+		return -ETIMEDOUT;
 	}
 
 	return ret;
