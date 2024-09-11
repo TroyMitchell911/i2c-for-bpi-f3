@@ -435,21 +435,19 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c, u32 cr_val)
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 {
-	if (unlikely(i2c->err)) {
-		dev_dbg(i2c->dev, "i2c error status: 0x%08x\n",
-			i2c->status);
-		if (i2c->err & (SR_BED | SR_ALD))
-			spacemit_i2c_reset(i2c);
+	if(!i2c->err)
+		return 0;
+	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n",
+		i2c->status);
+	if (i2c->err & (SR_BED | SR_ALD))
+		spacemit_i2c_reset(i2c);
 
-		/* try transfer again */
-		if (i2c->err & (SR_RXOV | SR_ALD)) {
-			spacemit_i2c_flush_fifo_buffer(i2c);
-			return -EAGAIN;
-		}
-		return (i2c->status & SR_ACKNAK) ? -ENXIO : -EIO;
+	/* try transfer again */
+	if (i2c->err & (SR_RXOV | SR_ALD)) {
+		spacemit_i2c_flush_fifo_buffer(i2c);
+		return -EAGAIN;
 	}
-
-	return 0;
+	return (i2c->status & SR_ACKNAK) ? -ENXIO : -EIO;
 }
 
 static irqreturn_t spacemit_i2c_int_handler(int irq, void *devid)
