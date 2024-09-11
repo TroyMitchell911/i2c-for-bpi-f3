@@ -171,16 +171,6 @@ static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
 			       i2c->ctrl_reg_value);
 }
 
-static void spacemit_i2c_flush_fifo_buffer(struct spacemit_i2c_dev
-					   *i2c)
-{
-	spacemit_i2c_write_reg(i2c, REG_WFIFO_WPTR, 0);
-	spacemit_i2c_write_reg(i2c, REG_WFIFO_RPTR, 0);
-
-	spacemit_i2c_write_reg(i2c, REG_RFIFO_WPTR, 0);
-	spacemit_i2c_write_reg(i2c, REG_RFIFO_RPTR, 0);
-}
-
 static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 {
 	spacemit_i2c_write_reg(i2c, REG_CR, CR_UR);
@@ -443,10 +433,8 @@ static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 		spacemit_i2c_reset(i2c);
 
 	/* try transfer again */
-	if (i2c->err & (SR_RXOV | SR_ALD)) {
-		spacemit_i2c_flush_fifo_buffer(i2c);
+	if (i2c->err & (SR_RXOV | SR_ALD))
 		return -EAGAIN;
-	}
 
 	return (i2c->status & SR_ACKNAK) ? -ENXIO : -EIO;
 }
