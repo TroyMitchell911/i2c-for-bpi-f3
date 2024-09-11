@@ -104,16 +104,16 @@
  #define WFIFO_CTRL_TB       BIT(11)     /* transfer byte bit */
 
 /* status register init value */
- #define SPACEMIT_I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
- #define SPACEMIT_I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
-					 CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
-					 CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
-					 CR_MSDIE)
+ #define I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
+ #define I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
+								 CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
+								 CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
+								 CR_MSDIE)
 
 /* i2c bus recover timeout: us */
- #define SPACEMIT_I2C_BUS_RECOVER_TIMEOUT	(100000)
+ #define I2C_BUS_RECOVER_TIMEOUT			(100000)
 
- #define SPACEMIT_I2C_FAST_MODE_FREQ		(400000)
+ #define I2C_FAST_MODE_FREQ					(400000)
 
 /* i2c-spacemit driver's main struct */
 struct spacemit_i2c_dev {
@@ -229,7 +229,7 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 				 val,
 				 !(val & (SR_UB | SR_IBB)),
 				 1500,
-				 SPACEMIT_I2C_BUS_RECOVER_TIMEOUT);
+				 I2C_BUS_RECOVER_TIMEOUT);
 	if (unlikely(ret)) {
 		spacemit_i2c_reset(i2c);
 		ret = -EAGAIN;
@@ -299,7 +299,7 @@ static inline void
 spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 {
 	spacemit_i2c_write_reg(i2c, ISR,
-			       mask & SPACEMIT_I2C_INT_STATUS_MASK);
+			       mask & I2C_INT_STATUS_MASK);
 }
 
 static void
@@ -488,11 +488,11 @@ err_out:
 		 * status.
 		 */
 		ctrl = spacemit_i2c_read_reg(i2c, ICR);
-		ctrl &= ~SPACEMIT_I2C_INT_CTRL_MASK;
+		ctrl &= ~I2C_INT_CTRL_MASK;
 		spacemit_i2c_write_reg(i2c, ICR, ctrl);
 
 		spacemit_i2c_clear_int_status(i2c,
-					      SPACEMIT_I2C_INT_STATUS_MASK);
+					      I2C_INT_STATUS_MASK);
 
 		complete(&i2c->complete);
 	}
@@ -511,7 +511,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 		idx++;
 	}
 
-	freq = SPACEMIT_I2C_FAST_MODE_FREQ;
+	freq = I2C_FAST_MODE_FREQ;
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
 	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2);
@@ -543,7 +543,7 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 
 	/* clear all interrupt status */
 	spacemit_i2c_clear_int_status(i2c,
-				      SPACEMIT_I2C_INT_STATUS_MASK);
+				      I2C_INT_STATUS_MASK);
 
 	spacemit_i2c_init_xfer_params(i2c);
 
