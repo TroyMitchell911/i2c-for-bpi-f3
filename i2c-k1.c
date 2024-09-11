@@ -139,7 +139,6 @@ struct spacemit_i2c_dev {
 	size_t count;
 
 	struct completion complete;
-	u32 timeout;
 	u32 ctrl_reg_value;
 	u32 status;
 	u32 err;
@@ -515,7 +514,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	freq = SPACEMIT_I2C_FAST_MODE_FREQ;
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
-	i2c->timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2);
+	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2);
 }
 
 static void spacemit_i2c_init_xfer_params(struct spacemit_i2c_dev *i2c)
@@ -572,7 +571,7 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	}
 
 	time_left = wait_for_completion_timeout(&i2c->complete,
-						i2c->timeout);
+						i2c->adapt.timeout);
 	if (unlikely(time_left == 0)) {
 		dev_alert(i2c->dev, "msg completion timeout\n");
 		spacemit_i2c_bus_reset(i2c);
