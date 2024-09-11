@@ -587,13 +587,12 @@ static int
 spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 {
 	struct spacemit_i2c_dev *i2c = i2c_get_adapdata(adapt);
-	int ret = 0, xfer_try = 0;
+	int ret;
 
 	mutex_lock(&i2c->mtx);
 	i2c->msgs = msgs;
 	i2c->msg_num = num;
 
-xfer_retry:
 	ret = spacemit_i2c_xfer_core(i2c);
 
 	if (likely(!ret))
@@ -606,18 +605,9 @@ xfer_retry:
 	if (unlikely(i2c->err))
 		ret = spacemit_i2c_handle_err(i2c);
 
-	xfer_try++;
-
-	/* retry i2c transfer 3 times for timeout and bus busy */
-	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN) &&
-		     xfer_try <= i2c->adapt.retries)) {
+	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN)))
 		dev_alert(i2c->dev,
-			  "i2c transfer retry %d, ret %d err 0x%x\n", xfer_try,
-			  ret, i2c->err);
-		usleep_range(150, 200);
-		ret = 0;
-		goto xfer_retry;
-	}
+			  	  "i2c transfer failed, ret %d err 0x%x\n", ret, i2c->err);
 
 	mutex_unlock(&i2c->mtx);
 
@@ -691,8 +681,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	i2c->adapt.algo = &spacemit_i2c_algrtm;
 	i2c->adapt.dev.parent = i2c->dev;
 	i2c->adapt.nr = pdev->id;
-
-	i2c->adapt.retries = 3;
 
 	i2c->adapt.dev.of_node = of_node;
 	i2c->adapt.algo_data = i2c;
