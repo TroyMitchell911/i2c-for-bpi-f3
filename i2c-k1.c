@@ -119,7 +119,6 @@
 struct spacemit_i2c_dev {
 	struct device *dev;
 	struct i2c_adapter adapt;
-	struct resource resrc;
 	struct clk *clk;
 	/* protecting the xfer process */
 	struct mutex mtx;
@@ -662,12 +661,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	i2c->dev = &pdev->dev;
 	mutex_init(&i2c->mtx);
 
-	ret = of_address_to_resource(of_node, 0, &i2c->resrc);
-	if (ret)
-		return dev_err_probe(&pdev->dev, -ENODEV, "failed to get resource");
-
-	i2c->mapbase = devm_ioremap_resource(i2c->dev, &i2c->resrc);
-	if (IS_ERR(i2c->mapbase)) {
+	i2c->mapbase = devm_platform_ioremap_resource(pdev, 0);
+	if (!i2c->mapbase) {
 		ret = PTR_ERR(i2c->mapbase);
 		return dev_err_probe(&pdev->dev, ret, "failed to do ioremap");
 	}
