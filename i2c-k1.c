@@ -447,6 +447,7 @@ static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 		spacemit_i2c_flush_fifo_buffer(i2c);
 		return -EAGAIN;
 	}
+
 	return (i2c->status & SR_ACKNAK) ? -ENXIO : -EIO;
 }
 
