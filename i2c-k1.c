@@ -4,25 +4,13 @@
  */
 
  #include <linux/clk.h>
- #include <linux/delay.h>
- #include <linux/err.h>
- #include <linux/interrupt.h>
  #include <linux/i2c.h>
- #include <linux/io.h>
  #include <linux/iopoll.h>
  #include <linux/module.h>
  #include <linux/mutex.h>
- #include <linux/of.h>
  #include <linux/of_address.h>
  #include <linux/platform_device.h>
- #include <linux/reboot.h>
  #include <linux/reset.h>
- #include <linux/scatterlist.h>
- #include <linux/slab.h>
- #include <linux/string.h>
- #include <linux/timer.h>
- #include <linux/time.h>
- #include <linux/uaccess.h>
 
 /* spacemit i2c registers */
  #define REG_CR          0x0     /* Control Register */
