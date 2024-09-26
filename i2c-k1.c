@@ -337,7 +337,7 @@ spacemit_i2c_stop(struct spacemit_i2c_dev *i2c, u32 val)
 
 	spacemit_i2c_write_reg(i2c, ICR, val);
 
-	// i2c->state = STATE_IDLE;
+	i2c->state = STATE_IDLE;
 	// dev_err(i2c->dev, "stop!\n");
 }
 
@@ -536,7 +536,17 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	if(ret == 0x58) {
 		ret = 0;
+		int test;
+		test = i2c->state;
+		
 		spacemit_i2c_stop(i2c, cr_val);
+
+		if(i2c->count == 1 && i2c->msg_idx == i2c->msg_num - 1 && test == STATE_READ)
+			i2c->state = STATE_READ;
+
+		if(i2c->count == 0 && i2c->msg_idx == i2c->msg_num - 1 && test == STATE_WRITE)
+			i2c->state = STATE_WRITE;
+		
 	}
 
 err_out:
