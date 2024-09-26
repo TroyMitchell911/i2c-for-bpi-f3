@@ -434,6 +434,7 @@ static void spacemit_i2c_fifo_xfer_fill_buffer(struct spacemit_i2c_dev *spacemit
 	int data_cnt = 0, i;
 	unsigned long flags;
 
+	// 遍历所有msg
 	while (spacemit_i2c->msg_idx < spacemit_i2c->num) {
 		spacemit_i2c_mark_rw_flag(spacemit_i2c);
 
@@ -452,6 +453,8 @@ static void spacemit_i2c_fifo_xfer_fill_buffer(struct spacemit_i2c_dev *spacemit
 			count = min_t(size_t, spacemit_i2c->cur_msg->len - finish,
 					SPACEMIT_I2C_TX_FIFO_DEPTH - fill);
 		} else {
+			// fast-mode or standard.
+			// add slave addr
 			fill += 1;
 			count = min_t(size_t, spacemit_i2c->cur_msg->len - finish,
 					SPACEMIT_I2C_TX_FIFO_DEPTH - fill);
@@ -460,6 +463,7 @@ static void spacemit_i2c_fifo_xfer_fill_buffer(struct spacemit_i2c_dev *spacemit
 		spacemit_i2c->is_xfer_start = false;
 		fill += count;
 		data = spacemit_i2c->slave_addr_rw;
+		// 添加控制bit 说明该字节传输数据和起始
 		data |= WFIFO_CTRL_TB | WFIFO_CTRL_START;
 
 		/* write slave address to fifo buffer */
@@ -488,15 +492,18 @@ static void spacemit_i2c_fifo_xfer_fill_buffer(struct spacemit_i2c_dev *spacemit
 			}
 		} else {
 			spacemit_i2c->tx_cnt += count;
+			// 判读是否是最后一个位需要发送
 			if (spacemit_i2c_is_last_byte_to_send(spacemit_i2c))
 				count -= 1;
 
 			while (count > 0) {
+				// 全部给他或上TB
 				data = *spacemit_i2c->msg_buf | WFIFO_CTRL_TB;
 				data_buf[data_cnt++] = data;
 				spacemit_i2c->msg_buf++;
 				count--;
 			}
+			// 最后一个字节 加上stop
 			if (spacemit_i2c_is_last_byte_to_send(spacemit_i2c)) {
 				data = *spacemit_i2c->msg_buf | WFIFO_CTRL_TB |
 						WFIFO_CTRL_STOP;
@@ -516,6 +523,7 @@ static void spacemit_i2c_fifo_xfer_fill_buffer(struct spacemit_i2c_dev *spacemit
 			spacemit_i2c->tx_cnt = 0;
 		}
 
+		// 判断是否填满了
 		if (fill == SPACEMIT_I2C_TX_FIFO_DEPTH)
 			break;
 	}
@@ -534,6 +542,7 @@ static void spacemit_i2c_fifo_xfer_copy_buffer(struct spacemit_i2c_dev *spacemit
 	/* copy the rx FIFO buffer to msg */
 	while (idx < spacemit_i2c->num) {
 		msg = spacemit_i2c->msgs + idx;
+		// 判断是否是读
 		if (msg->flags & I2C_M_RD) {
 			cnt = msg->len;
 			while (cnt > 0) {
@@ -1228,6 +1237,7 @@ static struct notifier_block spacemit_i2c_sys_nb = {
 static int
 spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 {
+	// 通过适配器获取私有数据
 	struct spacemit_i2c_dev *spacemit_i2c = i2c_get_adapdata(adapt);
 	int ret = 0, xfer_try = 0;
 	unsigned long time_left;
@@ -1290,6 +1300,7 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 	}
 
 xfer_retry:
+	// 如果cr寄存器值和上一次的值不一样，需要复位i2c
 	/* if unit keeps the last control status, don't need to do reset */
 	if (unlikely(spacemit_i2c_read_reg(spacemit_i2c, REG_CR) != spacemit_i2c->i2c_ctrl_reg_value))
 		/* i2c controller & bus reset */

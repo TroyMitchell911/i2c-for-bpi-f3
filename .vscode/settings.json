@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "string": "c",
+        "vector": "c",
+        "exception": "c",
+        "limits": "c",
+        "functional": "c",
+        "utility": "c",
+        "algorithm": "c"
+    }
+}
