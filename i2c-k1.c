@@ -149,7 +149,6 @@ struct spacemit_i2c_dev {
 	enum spacemit_i2c_dir dir;
 
 	struct completion complete;
-	u32 ctrl_reg_value;
 	u32 status;
 	u32 err;
 };
@@ -173,9 +172,10 @@ static void spacemit_i2c_enable(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
 {
-	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, ICR);
-       	i2c->ctrl_reg_value &= ~CR_IUE;
-	spacemit_i2c_write_reg(i2c, ICR, i2c->ctrl_reg_value);
+	u32 val;
+	val = spacemit_i2c_read_reg(i2c, ICR);
+	val &= ~CR_IUE;
+	spacemit_i2c_write_reg(i2c, ICR, val);
 }
 
 static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
@@ -183,7 +183,6 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 	spacemit_i2c_write_reg(i2c, ICR, CR_UR);
 	udelay(5);
 	spacemit_i2c_write_reg(i2c, ICR, 0);
-	i2c->ctrl_reg_value = spacemit_i2c_read_reg(i2c, ICR);
 }
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
@@ -617,9 +616,7 @@ static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	int ret = 0;
 	unsigned long time_left;
 
-	/* if i2c controller keeps the last control status, don't need to do reset */
-	if (spacemit_i2c_read_reg(i2c, ICR) != i2c->ctrl_reg_value)
-		spacemit_i2c_reset(i2c);
+	spacemit_i2c_reset(i2c);
 
 	spacemit_i2c_calc_timeout(i2c);
 
