@@ -299,6 +299,18 @@ spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 	spacemit_i2c_write_reg(i2c, ISR, mask & I2C_INT_STATUS_MASK);
 }
 
+static void spacemit_i2c_flush_fifo_buffer(struct spacemit_i2c_dev *spacemit_i2c)
+{
+	/* flush REG_WFIFO_WPTR and REG_WFIFO_RPTR */
+	spacemit_i2c_write_reg(spacemit_i2c, REG_WFIFO_WPTR, 0);
+	spacemit_i2c_write_reg(spacemit_i2c, REG_WFIFO_RPTR, 0);
+
+	/* flush REG_RFIFO_WPTR and REG_RFIFO_RPTR */
+	spacemit_i2c_write_reg(spacemit_i2c, REG_RFIFO_WPTR, 0);
+	spacemit_i2c_write_reg(spacemit_i2c, REG_RFIFO_RPTR, 0);
+}
+
+
 static void
 spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
@@ -336,7 +348,7 @@ spacemit_i2c_stop(struct spacemit_i2c_dev *i2c, u32 val)
 
 	spacemit_i2c_write_reg(i2c, ICR, val);
 
-	i2c->state = STATE_IDLE;
+	i2c->state = STATE_STOP;
 	// dev_err(i2c->dev, "stop!\n");
 }
 
@@ -364,6 +376,14 @@ static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *i2c)
 	i2c->count = i2c->cur_msg->len;
 
 	return spacemit_i2c_xfer_msg(i2c);
+}
+
+static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
+{
+	if(i2c->dir == DIR_READ)
+		return (i2c->count == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
+	else if(i2c->dir == DIR_WRITE)
+		return (!i2c->count && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
 }
 
 static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c)
@@ -397,42 +417,10 @@ static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c)
 	return 0;
 }
 
-static int spacemit_i2c_read(struct spacemit_i2c_dev *i2c)
+static inline void spacemit_i2c_read(struct spacemit_i2c_dev *i2c)
 {
-	int ret = 0;
-	u32 cr_val;
-
-	i2c->state = STATE_READ;
-
-	// dev_err(i2c->dev, "read!\n");
-
-	if (i2c->count) {
-		*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
-		i2c->count--;
-	}
-
-	/* if transfer completes, ISR will handle it */
-	if (i2c->status & (SR_MSD | SR_ACKNAK))
-		return 0;
-
-	cr_val = spacemit_i2c_read_reg(i2c, ICR);
-
-	/* trigger next byte receive */
-	if (i2c->count) {
-		/* send stop pulse for last byte of last msg */
-		if (i2c->count == 1 && i2c->msg_idx == i2c->msg_num - 1) {
-			// spacemit_i2c_stop(i2c, cr_val);
-			return 0x58;
-		}
-		else {
-			cr_val |= CR_ALDIE | CR_TB;
-			spacemit_i2c_write_reg(i2c, ICR, cr_val);
-		}
-	} else if (i2c->msg_idx < i2c->msg_num - 1) {
-		ret = spacemit_i2c_xfer_next_msg(i2c);
-	}
-
-	return ret;
+	*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
+	i2c->count--;
 }
 
 static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c)
@@ -468,6 +456,51 @@ static int spacemit_i2c_write(struct spacemit_i2c_dev *i2c)
 	}
 
 	return ret;
+}
+
+static int spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
+{
+	int ret;
+	if(i2c->dir == DIR_READ) {
+		i2c->state = STATE_READ;
+		ret = spacemit_i2c_ready_read(i2c);
+	} else if(i2c->dir == DIR_WRITE) {
+		i2c->state = STATE_WRITE;
+		ret = spacemit_i2c_write(i2c);
+	}
+	return ret;
+}
+
+static int spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
+{
+	int ret = 0;
+	u32 val;
+
+	if (i2c->count)
+		spacemit_i2c_read(i2c);
+
+	/* if transfer completes, ISR will handle it */
+	if (i2c->status & (SR_MSD | SR_ACKNAK))
+		return 0;
+
+	val = spacemit_i2c_read_reg(i2c, ICR);
+
+	/* send stop pulse for last byte of last msg */
+	if (spacemit_i2c_is_last_msg(i2c)) {
+		spacemit_i2c_stop(i2c, val);
+		i2c->state = STATE_READ;
+	}
+	else {
+		/* trigger next byte receive */
+		val |= CR_ALDIE | CR_TB;
+		spacemit_i2c_write_reg(i2c, ICR, val);
+	}
+	return ret;
+}
+
+static int spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
+{
+	return spacemit_i2c_write(i2c);
 }
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
@@ -526,23 +559,20 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	// /* tx empty */
 	// else if (i2c->status & SR_ITE)
 	// 	ret = spacemit_i2c_write(i2c, cr_val);
-
-	if(i2c->state == STATE_START) {
-		if(i2c->dir == DIR_READ) {
-			// i2c->state = STATE_READY_READ;
-			i2c->state = STATE_READ;
-			ret = spacemit_i2c_ready_read(i2c);
-		} else if(i2c->dir == DIR_WRITE) {
-			i2c->state = STATE_WRITE;
-			ret = spacemit_i2c_write(i2c);
-			
-		}
-	} else if(i2c->state == STATE_WRITE) {
-		ret = spacemit_i2c_write(i2c);
-	} else if(i2c->state == STATE_READ) {
-		ret = spacemit_i2c_read(i2c);
-	}
 	
+	switch(i2c->state) {
+		case STATE_START:
+		ret = spacemit_i2c_handle_start(i2c);
+		break;
+		case STATE_READ:
+		ret = spacemit_i2c_handle_read(i2c);
+		break;
+		case STATE_WRITE:
+		ret = spacemit_i2c_handle_write(i2c);
+		break;
+		default:
+		break;
+	}
 
 	if(ret == 0x58) {
 		ret = 0;
