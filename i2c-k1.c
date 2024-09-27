@@ -153,6 +153,8 @@ struct spacemit_i2c_dev {
 	u32 err;
 };
 
+static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c);
+
 static inline u32 spacemit_i2c_read_reg(struct spacemit_i2c_dev *i2c, int reg)
 {
 	return readl(i2c->base + reg);
@@ -332,13 +334,14 @@ spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 	val = spacemit_i2c_read_reg(i2c, ICR);
 
 	val |= CR_STOP | CR_ALDIE | CR_TB;
+	// val |= CR_STOP;
 
 	if(i2c->dir == DIR_READ)
 		val |= CR_ACKNAK;
 
 	spacemit_i2c_write_reg(i2c, ICR, val);
 
-	i2c->state = STATE_IDLE;
+//	i2c->state = STATE_IDLE;
 	// dev_err(i2c->dev, "stop!\n");
 }
 
@@ -373,6 +376,9 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 			spacemit_i2c_reset(i2c);
 			return -ETIMEDOUT;
 		}
+		if (unlikely(i2c->err)) {
+			return spacemit_i2c_handle_err(i2c);
+		}
 
 		init_completion(&i2c->complete);
 	}
@@ -380,55 +386,12 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 	return 0;
 }
 
-// static int spacemit_i2c_xfer_next_msg(struct spacemit_i2c_dev *i2c)
-// {
-// 	if (i2c->msg_idx == i2c->msg_num - 1)
-// 		return 0;
-
-// 	i2c->msg_idx++;
-// 	i2c->cur_msg = i2c->msgs + i2c->msg_idx;
-// 	i2c->msg_buf = i2c->cur_msg->buf;
-// 	i2c->err = 0;
-// 	i2c->status = 0;
-// 	i2c->count = i2c->cur_msg->len;
-
-// 	// return spacemit_i2c_xfer_msg(i2c);
-// }
-
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
 	if(i2c->dir == DIR_READ)
 		return (i2c->count == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
 	else if(i2c->dir == DIR_WRITE)
 		return (!i2c->count && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
-	return 0;
-}
-
-static int spacemit_i2c_ready_read(struct spacemit_i2c_dev *i2c)
-{
-	u32 val;
-
-	if (i2c->status & SR_MSD)
-		return 0;
-
-	/* send stop pulse for last byte of last msg */
-	if (i2c->count == 1 && i2c->msg_idx == i2c->msg_num - 1) {
-		spacemit_i2c_stop(i2c);
-		// return 0x58;
-	} else {
-		val = spacemit_i2c_read_reg(i2c, ICR);
-		/* trigger next byte receive */
-		val |= CR_ALDIE | CR_TB;
-
-	/*
-	 * Mask transmit empty interrupt to avoid useless tx
-	 * interrupt signal after switch to receive mode, the
-	 * next expected is receive full interrupt signal.
-	 */
-		val &= ~CR_DTEIE;
-		spacemit_i2c_write_reg(i2c, ICR, val);
-	}
-
 	return 0;
 }
 
@@ -444,74 +407,49 @@ static inline void spacemit_i2c_write(struct spacemit_i2c_dev *i2c)
 	i2c->count--;
 }
 
-static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
+static int spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 {
-	u32 val;
-
 	if (i2c->count)
 		spacemit_i2c_read(i2c);
 
 	/* if transfer completes, ISR will handle it */
 	if (i2c->status & (SR_MSD | SR_ACKNAK))
-		return;
+		return 0;
 
-	
+	if(i2c->count)
+		return 1;
 
-	if(i2c->count) {
-		/* send stop pulse for last byte of last msg */
-		if (spacemit_i2c_is_last_msg(i2c)) {
-			spacemit_i2c_stop(i2c);
-			i2c->state = STATE_READ;
-		}
-		else {
-			val = spacemit_i2c_read_reg(i2c, ICR);
-			/* trigger next byte receive */
-			val |= CR_ALDIE | CR_TB;
-			spacemit_i2c_write_reg(i2c, ICR, val);
-		}
-	} else {
-		dev_err(i2c->dev, "read complete\n");
-		complete(&i2c->complete);
-	}
+	dev_err(i2c->dev, "read complete\n");
+	complete(&i2c->complete);
+	return 0;
 }
 
-static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
+static int spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 {
-	u32 val;
-
 	if (i2c->status & SR_MSD)
-		return;
-
-	
+		return 0;
 
 	if (i2c->count) {
 		spacemit_i2c_write(i2c);
-
-		/* send stop pulse for last byte of last msg */
-		if (!i2c->count && i2c->msg_idx == i2c->msg_num - 1) {
-			spacemit_i2c_stop(i2c);
-		}
-		else {
-			val = spacemit_i2c_read_reg(i2c, ICR);
-			val |= CR_ALDIE | CR_TB;
-			spacemit_i2c_write_reg(i2c, ICR, val);
-		}
-
-	} else if (i2c->msg_idx < i2c->msg_num - 1) {
-		dev_err(i2c->dev, "write complete\n");
-		complete(&i2c->complete);
+		dev_err(i2c->dev, "handle write: count: %d\n", i2c->count);
+		return 1;
 	}
+	
+	dev_err(i2c->dev, "write complete\n");
+	complete(&i2c->complete);
+	return 0;
 }
 
-static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
+static int spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 {
 	if(i2c->dir == DIR_READ) {
-		spacemit_i2c_ready_read(i2c);
 		i2c->state = STATE_READ;
+		return 1;
 	} else if(i2c->dir == DIR_WRITE) {
 		i2c->state = STATE_WRITE;
-		spacemit_i2c_handle_write(i2c);
+		return spacemit_i2c_handle_write(i2c);
 	}
+	return 0;
 }
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
@@ -536,6 +474,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 {
 	struct spacemit_i2c_dev *i2c = devid;
 	u32 status, ctrl, cr_val;
+	int ret = 0;
 
 	status = spacemit_i2c_read_reg(i2c, ISR);
 
@@ -547,6 +486,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	/* bus error, rx overrun, arbitration lost */
 	i2c->err = status & (SR_BED | SR_RXOV | SR_ALD);
+	dev_err(i2c->dev, "i2c->err: %d, status: %d\n", i2c->err, status & SR_MSD);
 
 	/* clear interrupt status bits[31:18] */
 	spacemit_i2c_clear_int_status(i2c, status);
@@ -558,21 +498,38 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	cr_val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
 
-	spacemit_i2c_write_reg(i2c, ICR, cr_val);
 	
+	dev_err(i2c->dev, "now state:%d\n", i2c->state);
 	switch(i2c->state) {
 		case STATE_START:
-		spacemit_i2c_handle_start(i2c);
+		dev_err(i2c->dev, "handle start\n");
+		ret = spacemit_i2c_handle_start(i2c);
 		break;
 		case STATE_READ:
-		spacemit_i2c_handle_read(i2c);
+		dev_err(i2c->dev, "handle read\n");
+		ret = spacemit_i2c_handle_read(i2c);
 		break;
 		case STATE_WRITE:
-		spacemit_i2c_handle_write(i2c);
+		dev_err(i2c->dev, "handle write\n");
+		ret = spacemit_i2c_handle_write(i2c);
 		break;
 		default:
 		break;
 	}
+	dev_err(i2c->dev, "after state:%d\n", i2c->state);
+
+	if(ret) {
+		if(spacemit_i2c_is_last_msg(i2c)) {
+			dev_err(i2c->dev, "handle stop\n");
+			spacemit_i2c_stop(i2c);
+		} else {
+			dev_err(i2c->dev, "trigger\n");
+			//cr_val = spacemit_i2c_read_reg(i2c, ICR);
+			cr_val |= CR_ALDIE | CR_TB;
+			spacemit_i2c_write_reg(i2c, ICR, cr_val);
+		}
+	}
+	dev_err(i2c->dev, "after after state:%d\n", i2c->state);
 
 err_out:
 	/*
@@ -593,6 +550,7 @@ err_out:
 
 		spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
 
+		dev_err(i2c->dev, "irq complete: i2c->err: %d, status: %d\n", i2c->err, status & SR_MSD);
 		complete(&i2c->complete);
 	}
 
