@@ -12,107 +12,107 @@
  #include <linux/reset.h>
 
 /* spacemit i2c registers */
- #define ICR          0x0     /* Control Register */
- #define ISR          0x4     /* Status Register */
- #define ISAR         0x8     /* Slave Address Register */
- #define IDBR         0xc     /* Data Buffer Register */
- #define ILCR         0x10    /* Load Count Register */
- #define IWCR         0x14    /* Wait Count Register */
- #define IRST_CYC     0x18    /* Bus reset cycle counter */
- #define IBMR         0x1c    /* Bus monitor register */
- #define IWFIFO       0x20    /* Write FIFO Register */
- #define IWFIFO_WPTR  0x24    /* Write FIFO Write Pointer Register */
- #define IWFIFO_RPTR  0x28    /* Write FIFO Read Pointer Register */
- #define IRFIFO       0x2c    /* Read FIFO Register */
- #define IRFIFO_WPTR  0x30    /* Read FIFO Write Pointer Register */
- #define IRFIFO_RPTR  0x34    /* Read FIFO Read Pointer Register */
+#define ICR          0x0		/* Control Register */
+#define ISR          0x4		/* Status Register */
+#define ISAR         0x8		/* Slave Address Register */
+#define IDBR         0xc		/* Data Buffer Register */
+#define ILCR         0x10		/* Load Count Register */
+#define IWCR         0x14		/* Wait Count Register */
+#define IRST_CYC     0x18		/* Bus reset cycle counter */
+#define IBMR         0x1c		/* Bus monitor register */
+#define IWFIFO       0x20		/* Write FIFO Register */
+#define IWFIFO_WPTR  0x24		/* Write FIFO Write Pointer Register */
+#define IWFIFO_RPTR  0x28		/* Write FIFO Read Pointer Register */
+#define IRFIFO       0x2c		/* Read FIFO Register */
+#define IRFIFO_WPTR  0x30		/* Read FIFO Write Pointer Register */
+#define IRFIFO_RPTR  0x34		/* Read FIFO Read Pointer Register */
 
 /* register ICR fields */
- #define CR_START        BIT(0)  /* start bit */
- #define CR_STOP         BIT(1)  /* stop bit */
- #define CR_ACKNAK       BIT(2)  /* send ACK(0) or NAK(1) */
- #define CR_TB           BIT(3)  /* transfer byte bit */
- #define CR_TXBEGIN      BIT(4)  /* transaction begin */
- #define CR_FIFOEN       BIT(5)  /* enable FIFO mode */
- #define CR_GPIOEN       BIT(6)  /* enable GPIO mode for SCL in HS */
- #define CR_DMAEN        BIT(7)  /* enable DMA for TX and RX FIFOs */
- #define CR_MODE_FAST    BIT(8)  /* bus mode (master operation) */
- #define CR_MODE_HIGH    BIT(9)  /* bus mode (master operation) */
- #define CR_UR           BIT(10) /* unit reset */
- #define CR_RSTREQ       BIT(11) /* i2c bus reset request */
- #define CR_MA           BIT(12) /* master abort */
- #define CR_SCLE         BIT(13) /* master clock enable */
- #define CR_IUE          BIT(14) /* unit enable */
- #define CR_HS_STRETCH   BIT(16) /* I2C hs stretch */
- #define CR_ALDIE        BIT(18) /* enable arbitration interrupt */
- #define CR_DTEIE        BIT(19) /* enable tx interrupts */
- #define CR_DRFIE        BIT(20) /* enable rx interrupts */
- #define CR_GCD          BIT(21) /* general call disable */
- #define CR_BEIE         BIT(22) /* enable bus error ints */
- #define CR_SADIE        BIT(23) /* slave address detected int enable */
- #define CR_SSDIE        BIT(24) /* slave STOP detected int enable */
- #define CR_MSDIE        BIT(25) /* master STOP detected int enable */
- #define CR_MSDE         BIT(26) /* master STOP detected enable */
- #define CR_TXDONEIE     BIT(27) /* transaction done int enable */
- #define CR_TXEIE        BIT(28) /* transmit FIFO empty int enable */
- #define CR_RXHFIE       BIT(29) /* receive FIFO half-full int enable */
- #define CR_RXFIE        BIT(30) /* receive FIFO full int enable */
- #define CR_RXOVIE       BIT(31) /* receive FIFO overrun int enable */
+#define CR_START        BIT(0)		/* start bit */
+#define CR_STOP         BIT(1)		/* stop bit */
+#define CR_ACKNAK       BIT(2)		/* send ACK(0) or NAK(1) */
+#define CR_TB           BIT(3)		/* transfer byte bit */
+#define CR_TXBEGIN      BIT(4)		/* transaction begin */
+#define CR_FIFOEN       BIT(5)		/* enable FIFO mode */
+#define CR_GPIOEN       BIT(6)		/* enable GPIO mode for SCL in HS */
+#define CR_DMAEN        BIT(7)		/* enable DMA for TX and RX FIFOs */
+#define CR_MODE_FAST    BIT(8)		/* bus mode (master operation) */
+#define CR_MODE_HIGH    BIT(9)		/* bus mode (master operation) */
+#define CR_UR           BIT(10)		/* unit reset */
+#define CR_RSTREQ       BIT(11)		/* i2c bus reset request */
+#define CR_MA           BIT(12)		/* master abort */
+#define CR_SCLE         BIT(13)		/* master clock enable */
+#define CR_IUE          BIT(14)		/* unit enable */
+#define CR_HS_STRETCH   BIT(16)		/* I2C hs stretch */
+#define CR_ALDIE        BIT(18)		/* enable arbitration interrupt */
+#define CR_DTEIE        BIT(19)		/* enable tx interrupts */
+#define CR_DRFIE        BIT(20)		/* enable rx interrupts */
+#define CR_GCD          BIT(21)		/* general call disable */
+#define CR_BEIE         BIT(22)		/* enable bus error ints */
+#define CR_SADIE        BIT(23)		/* slave address detected int enable */
+#define CR_SSDIE        BIT(24)		/* slave STOP detected int enable */
+#define CR_MSDIE        BIT(25)		/* master STOP detected int enable */
+#define CR_MSDE         BIT(26)		/* master STOP detected enable */
+#define CR_TXDONEIE     BIT(27)		/* transaction done int enable */
+#define CR_TXEIE        BIT(28)		/* transmit FIFO empty int enable */
+#define CR_RXHFIE       BIT(29)		/* receive FIFO half-full int enable */
+#define CR_RXFIE        BIT(30)		/* receive FIFO full int enable */
+#define CR_RXOVIE       BIT(31)		/* receive FIFO overrun int enable */
 
 /* register ISR fields */
- #define SR_RWM          BIT(13) /* read/write mode */
- #define SR_ACKNAK       BIT(14) /* ACK/NACK status */
- #define SR_UB           BIT(15) /* unit busy */
- #define SR_IBB          BIT(16) /* i2c bus busy */
- #define SR_EBB          BIT(17) /* early bus busy */
- #define SR_ALD          BIT(18) /* arbitration loss detected */
- #define SR_ITE          BIT(19) /* tx buffer empty */
- #define SR_IRF          BIT(20) /* rx buffer full */
- #define SR_GCAD         BIT(21) /* general call address detected */
- #define SR_BED          BIT(22) /* bus error no ACK/NAK */
- #define SR_SAD          BIT(23) /* slave address detected */
- #define SR_SSD          BIT(24) /* slave stop detected */
- #define SR_MSD          BIT(26) /* master stop detected */
- #define SR_TXDONE       BIT(27) /* transaction done */
- #define SR_TXE          BIT(28) /* tx FIFO empty */
- #define SR_RXHF         BIT(29) /* rx FIFO half-full */
- #define SR_RXF          BIT(30) /* rx FIFO full */
- #define SR_RXOV         BIT(31) /* RX FIFO overrun */
+#define SR_RWM          BIT(13)		/* read/write mode */
+#define SR_ACKNAK       BIT(14)		/* ACK/NACK status */
+#define SR_UB           BIT(15)		/* unit busy */
+#define SR_IBB          BIT(16)		/* i2c bus busy */
+#define SR_EBB          BIT(17)		/* early bus busy */
+#define SR_ALD          BIT(18)		/* arbitration loss detected */
+#define SR_ITE          BIT(19)		/* tx buffer empty */
+#define SR_IRF          BIT(20)		/* rx buffer full */
+#define SR_GCAD         BIT(21)		/* general call address detected */
+#define SR_BED          BIT(22)		/* bus error no ACK/NAK */
+#define SR_SAD          BIT(23)		/* slave address detected */
+#define SR_SSD          BIT(24)		/* slave stop detected */
+#define SR_MSD          BIT(26)		/* master stop detected */
+#define SR_TXDONE       BIT(27)		/* transaction done */
+#define SR_TXE          BIT(28)		/* tx FIFO empty */
+#define SR_RXHF         BIT(29)		/* rx FIFO half-full */
+#define SR_RXF          BIT(30) 	/* rx FIFO full */
+#define SR_RXOV         BIT(31) 	/* RX FIFO overrun */
 
 /* register ILCR fields */
- #define LCR_SLV         0x000001FF  /* SLV: bit[8:0] */
- #define LCR_FLV         0x0003FE00  /* FLV: bit[17:9] */
- #define LCR_HLVH        0x07FC0000  /* HLVH: bit[26:18] */
- #define LCR_HLVL        0xF8000000  /* HLVL: bit[31:27] */
+#define LCR_SLV         0x000001FF	/* SLV: bit[8:0] */
+#define LCR_FLV         0x0003FE00	/* FLV: bit[17:9] */
+#define LCR_HLVH        0x07FC0000	/* HLVH: bit[26:18] */
+#define LCR_HLVL        0xF8000000	/* HLVL: bit[31:27] */
 
 /* register IWCR fields */
- #define WCR_COUNT       0x0000001F  /* COUNT: bit[4:0] */
- #define WCR_COUNT1      0x000003E0  /* HS_COUNT1: bit[9:5] */
- #define WCR_COUNT2      0x00007C00  /* HS_COUNT2: bit[14:10] */
+#define WCR_COUNT       0x0000001F	/* COUNT: bit[4:0] */
+#define WCR_COUNT1      0x000003E0	/* HS_COUNT1: bit[9:5] */
+#define WCR_COUNT2      0x00007C00	/* HS_COUNT2: bit[14:10] */
 
 /* register IBMR fields */
- #define BMR_SDA         BIT(0)  /* SDA line level */
- #define BMR_SCL         BIT(1)  /* SCL line level */
+#define BMR_SDA         BIT(0)		/* SDA line level */
+#define BMR_SCL         BIT(1)		/* SCL line level */
 
 /* register IWFIFO fields */
- #define WFIFO_DATA_MSK      0x000000FF  /* data: bit[7:0] */
- #define WFIFO_CTRL_MSK      0x000003E0  /* control: bit[11:8] */
- #define WFIFO_CTRL_START    BIT(8)      /* start bit */
- #define WFIFO_CTRL_STOP     BIT(9)      /* stop bit */
- #define WFIFO_CTRL_ACKNAK   BIT(10)     /* send ACK(0) or NAK(1) */
- #define WFIFO_CTRL_TB       BIT(11)     /* transfer byte bit */
+#define WFIFO_DATA_MSK      0x000000FF  /* data: bit[7:0] */
+#define WFIFO_CTRL_MSK      0x000003E0  /* control: bit[11:8] */
+#define WFIFO_CTRL_START    BIT(8)      /* start bit */
+#define WFIFO_CTRL_STOP     BIT(9)      /* stop bit */
+#define WFIFO_CTRL_ACKNAK   BIT(10)     /* send ACK(0) or NAK(1) */
+#define WFIFO_CTRL_TB       BIT(11)     /* transfer byte bit */
 
 /* status register init value */
- #define I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
- #define I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
-				 CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
-				 CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
-				 CR_MSDIE)
+#define I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
+#define I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
+				CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
+				CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
+				CR_MSDIE)
 
 /* i2c bus recover timeout: us */
- #define I2C_BUS_RECOVER_TIMEOUT			(100000)
+#define I2C_BUS_RECOVER_TIMEOUT		(100000)
 
- #define I2C_FAST_MODE_FREQ					(400000)
+#define I2C_FAST_MODE_FREQ		(400000)
 
 enum spacemit_i2c_state {
 	STATE_IDLE,
