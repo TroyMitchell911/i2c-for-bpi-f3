@@ -619,7 +619,7 @@ static u32 spacemit_i2c_func(struct i2c_adapter *adap)
 }
 
 static const struct i2c_algorithm spacemit_i2c_algo = {
-	.master_xfer = spacemit_i2c_xfer,
+	.xfer = spacemit_i2c_xfer,
 	.functionality = spacemit_i2c_func,
 };
 
