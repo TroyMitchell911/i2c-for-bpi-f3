@@ -386,7 +386,7 @@ static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 	return 0;
 }
 
-static int spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
+static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 {
 	if (i2c->unprocessed) {
 		*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
@@ -395,42 +395,40 @@ static int spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 
 	/* if transfer completes, ISR will handle it */
 	if (i2c->status & (SR_MSD | SR_ACKNAK))
-		return 0;
+		return;
 
 	/* it has to append stop bit in icr that read last byte */
 	if(i2c->unprocessed)
-		return 1;
+		return;
 
+	i2c->state = STATE_IDLE;
 	complete(&i2c->complete);
-	return 0;
 }
 
-static int spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
+static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 {
 	/* if transfer completes, ISR will handle it */
 	if (i2c->status & SR_MSD)
-		return 0;
+		return;
 
 	if (i2c->unprocessed) {
 		spacemit_i2c_write_reg(i2c, IDBR, *i2c->msg_buf++);
 		i2c->unprocessed--;
-		return 1;
+		return;
 	}
-	
+
+	i2c->state = STATE_IDLE;
 	complete(&i2c->complete);
-	return 0;
 }
 
-static int spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
+static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 {
 	if(i2c->dir == DIR_READ) {
 		i2c->state = STATE_READ;
-		return 1;
 	} else if(i2c->dir == DIR_WRITE) {
 		i2c->state = STATE_WRITE;
-		return spacemit_i2c_handle_write(i2c);
+		spacemit_i2c_handle_write(i2c);
 	}
-	return 0;
 }
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
@@ -455,7 +453,6 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 {
 	struct spacemit_i2c_dev *i2c = devid;
 	u32 status, ctrl, val;
-	int ret = 0;
 
 	status = spacemit_i2c_read_reg(i2c, ISR);
 
@@ -480,19 +477,19 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	
 	switch(i2c->state) {
 		case STATE_START:
-		ret = spacemit_i2c_handle_start(i2c);
+		spacemit_i2c_handle_start(i2c);
 		break;
 		case STATE_READ:
-		ret = spacemit_i2c_handle_read(i2c);
+		spacemit_i2c_handle_read(i2c);
 		break;
 		case STATE_WRITE:
-		ret = spacemit_i2c_handle_write(i2c);
+		spacemit_i2c_handle_write(i2c);
 		break;
 		default:
 		break;
 	}
 
-	if(ret) {
+	if(i2c->state != STATE_IDLE) {
 		if(spacemit_i2c_is_last_msg(i2c)) {
 			spacemit_i2c_stop(i2c);
 		} else {
