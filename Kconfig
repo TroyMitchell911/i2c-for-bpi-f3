@@ -1,17 +1,17 @@
 config I2C_K1
-	tristate "Spacemit K1 I2C adapter"
-	depends on ARCH_SPACEMIT || COMPILE_TEST
+	tristate "spacemit k1 i2c adapter"
+	depends on arch_spacemit || compile_test
 	help
-	  This option enables support for the I2C interface on the Spacemit K1
+	  this option enables support for the i2c interface on the spacemit k1
 	  platform.
 
-	  If you enable this configuration, the kernel will include support for
-	  the I2C adapter specific to the Spacemit K1 platform. This driver ca
-	  be used to manage I2C bus transactions, which are necessary for
-	  interfacing with I2C peripherals such as sensors, EEPROMs, and other
+	  if you enable this configuration, the kernel will include support for
+	  the i2c adapter specific to the spacemit k1 platform. this driver ca
+	  be used to manage i2c bus transactions, which are necessary for
+	  interfacing with i2c peripherals such as sensors, eeproms, and other
 	  devices.
 
-	  This driver can also be compiled as a module. If you choose to build
+	  this driver can also be compiled as a module. if you choose to build
 	  it as a module, the resulting kernel module will be named `i2c-k1`.
-	  Loading this module will enable the I2C functionality for the K1
+	  loading this module will enable the i2c functionality for the k1
 	  platform dynamically, without requiring a rebuild of the kernel.
