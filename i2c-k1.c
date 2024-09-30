@@ -76,8 +76,8 @@
 #define SR_TXDONE       BIT(27)		/* transaction done */
 #define SR_TXE          BIT(28)		/* tx FIFO empty */
 #define SR_RXHF         BIT(29)		/* rx FIFO half-full */
-#define SR_RXF          BIT(30) 	/* rx FIFO full */
-#define SR_RXOV         BIT(31) 	/* RX FIFO overrun */
+#define SR_RXF          BIT(30)		/* rx FIFO full */
+#define SR_RXOV         BIT(31)		/* RX FIFO overrun */
 
 /* register ILCR fields */
 #define LCR_SLV         0x000001FF	/* SLV: bit[8:0] */
@@ -131,9 +131,8 @@ struct spacemit_i2c_dev {
 	struct device *dev;
 	struct i2c_adapter adapt;
 
-	/* virtual base address mapped for register */
+	/* hardware resources */
 	void __iomem *base;
-
 	struct reset_control *resets;
 	int irq;
 
@@ -141,13 +140,11 @@ struct spacemit_i2c_dev {
 	int msg_num;
 	struct i2c_msg *cur_msg;
 	int msg_idx;
-	/* pointing cur_msg->buf */
 	u8 *msg_buf;
-	/* recording the number of messages transmitted */
 	size_t unprocessed;
+
 	enum spacemit_i2c_state state;
 	enum spacemit_i2c_dir dir;
-
 	struct completion complete;
 	u32 status;
 	u32 err;
@@ -192,7 +189,6 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 {
-	int clk_cnt = 0;
 	u32 status;
 
 	/* if bus is locked, reset unit. 0: locked */
@@ -208,27 +204,6 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 		if (!(status & BMR_SCL))
 			dev_alert(i2c->dev, "unit reset failed\n");
 	}
-
-	while (clk_cnt < 9) {
-		/* check whether the SDA is still locked by slave */
-		status = spacemit_i2c_read_reg(i2c, IBMR);
-
-		if (status & BMR_SDA)
-			break;
-
-		/* if still locked, send one clk to slave to request release */
-		spacemit_i2c_write_reg(i2c, IRST_CYC, 0x1);
-		spacemit_i2c_write_reg(i2c, ICR, CR_RSTREQ);
-		usleep_range(20, 30);
-		clk_cnt++;
-	}
-
-	status = spacemit_i2c_read_reg(i2c, IBMR);
-
-	if (clk_cnt >= 9 && !(status & BMR_SDA))
-		dev_alert(i2c->dev, "bus reset clk reaches the max 9-clocks\n");
-	else
-		dev_alert(i2c->dev, "bus reset, send clk: %d\n", clk_cnt);
 }
 
 static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
@@ -343,14 +318,12 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 {
-	int i;
 	unsigned long time_left;
 
 	if (unlikely(i2c->err))
 		return -1;
 
-	for (i = 0; i < i2c->msg_num; i++) {
-		i2c->msg_idx = i;
+	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
 		i2c->cur_msg = i2c->msgs + i2c->msg_idx;
 		i2c->msg_buf = i2c->cur_msg->buf;
 		i2c->err = 0;
@@ -522,6 +495,7 @@ err_out:
 
 		spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
 
+		i2c->state = STATE_IDLE;
 		complete(&i2c->complete);
 	}
 
@@ -543,8 +517,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
 
-	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) \
-			     / i2c->msg_num;
+	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) / i2c->msg_num;
 }
 
 static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
@@ -556,9 +529,6 @@ static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	spacemit_i2c_calc_timeout(i2c);
 
 	spacemit_i2c_init(i2c);
-
-	/* clear all interrupt status */
-	spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
 
 	reinit_completion(&i2c->complete);
 
@@ -603,9 +573,6 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 	disable_irq(i2c->irq);
 
 	spacemit_i2c_disable(i2c);
-
-	if (unlikely(i2c->err))
-		ret = spacemit_i2c_handle_err(i2c);
 
 	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN)))
 		dev_alert(i2c->dev,
