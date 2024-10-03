@@ -370,6 +370,16 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 #endif	
 }
 
+static void spacemit_i2c_prepare_read(spacemit_i2c_dev *i2c)
+{
+#if I2C_FIFO
+
+#else
+	*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
+	i2c->unprocessed--;
+#endif
+}
+
 static void
 spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
@@ -407,6 +417,8 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 	data = *i2c->msg_buf;
 	data |= WFIFO_CTRL_TB;
 	data |= WFIFO_CTRL_STOP;
+	if (i2c->dir == DIR_READ)
+		data |= WFIFO_CTRL_ACKNAK;
 	spacemit_i2c_write_reg(i2c, IWFIFO, data);
 	dev_err(i2c->dev, "i2c stop write: %x\n", data);
 	i2c->state = STATE_IDLE;
@@ -500,10 +512,8 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->unprocessed) {
-		*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
-		i2c->unprocessed--;
-	}
+	if (i2c->unprocessed)
+		spacemit_i2c_prepare_read(i2c);
 
 	/* if transfer completes, ISR will handle it */
 	if (i2c->status & (SR_MSD | SR_ACKNAK))
