@@ -103,7 +103,7 @@
 #define WFIFO_CTRL_TB       BIT(11)     /* transfer byte bit */
 
 /* status register init value */
-#define I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
+#define I2C_INT_STATUS_MASK    0xfffc0000	/* SR bits[31:18] */
 #define I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
 				CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
 				CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
@@ -113,6 +113,11 @@
 #define I2C_BUS_RECOVER_TIMEOUT		(100000)
 
 #define I2C_FAST_MODE_FREQ		(400000)
+
+#define I2C_TX_FIFO_DEPTH		8
+#define I2C_RX_FIFO_DEPTH		16
+
+#define I2C_FIFO			1
 
 enum spacemit_i2c_state {
 	STATE_IDLE,
@@ -133,10 +138,10 @@ struct spacemit_i2c_dev {
 
 	/* virtual base address mapped for register */
 	void __iomem *base;
-
 	struct reset_control *resets;
 	int irq;
 
+	u32 slave_addr_rw;
 	struct i2c_msg *msgs;
 	int msg_num;
 	struct i2c_msg *cur_msg;
@@ -145,6 +150,7 @@ struct spacemit_i2c_dev {
 	u8 *msg_buf;
 	/* recording the number of messages transmitted */
 	size_t unprocessed;
+
 	enum spacemit_i2c_state state;
 	enum spacemit_i2c_dir dir;
 
@@ -154,6 +160,7 @@ struct spacemit_i2c_dev {
 };
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c);
+static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c);
 
 static inline u32 spacemit_i2c_read_reg(struct spacemit_i2c_dev *i2c, int reg)
 {
@@ -274,14 +281,6 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 	 */
 	val |= CR_BEIE | CR_ALDIE;
 
-	/*
-	 * Unmask interrupt bits for interrupt xfer mode:
-	 * DBR rx full.
-	 * For tx empty interrupt CR_DTEIE, we only
-	 * need to enable when trigger byte transfer to start
-	 * data sending.
-	 */
-	val |= CR_DRFIE;
 
 	/* set speed bits: default fast mode */
 	val |= CR_MODE_FAST;
@@ -295,7 +294,23 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 	/* enable master stop detected */
 	val |= CR_MSDE | CR_MSDIE;
 
+#if I2C_FIFO
+	val |= CR_FIFOEN;
+	val |= CR_TXEIE;
+	val |= CR_RXHFIE;
+	//val |= CR_TXDONEIE;
+#else
+	/*
+	 * Unmask interrupt bits for interrupt xfer mode:
+	 * DBR rx full.
+	 * For tx empty interrupt CR_DTEIE, we only
+	 * need to enable when trigger byte transfer to start
+	 * data sending.
+	 */
+	val |= CR_DRFIE;
+#endif
 	spacemit_i2c_write_reg(i2c, ICR, val);
+	spacemit_i2c_write_reg(i2c, ISR, 0x10000000);
 }
 
 static inline void
@@ -304,20 +319,75 @@ spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 	spacemit_i2c_write_reg(i2c, ISR, mask & I2C_INT_STATUS_MASK);
 }
 
+static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
+{
+#if I2C_FIFO
+	int fill = 0, i;
+	size_t unprocessed;
+	u16 len;
+	u32 data_buf[I2C_TX_FIFO_DEPTH * 2];
+	u32 data;
+/*
+	if (i2c->unprocessed == i2c->cur_msg->len) {
+		data = i2c->slave_addr_rw;
+		data |= WFIFO_CTRL_TB | WFIFO_CTRL_START;
+		data_buf[fill++] = data;
+	}
+*/
+	unprocessed = i2c->unprocessed;
+	if (spacemit_i2c_is_last_msg(i2c))
+		unprocessed -= 1;
+
+	len = min_t(size_t,
+		    unprocessed - 1,
+		    I2C_TX_FIFO_DEPTH - fill);
+
+	dev_err(i2c->dev, "fill len: %d\n", len);
+	len += fill;
+
+	for (; fill < len; fill ++) {
+		dev_err(i2c->dev, "fill:%d\n", fill);
+		data = *(i2c->msg_buf++);
+		i2c->unprocessed --;
+		data |= WFIFO_CTRL_TB;
+//		if(i2c->unprocessed == 0)
+//			data |= WFIFO_CTRL_STOP;
+		data_buf[fill] = data;
+	}
+
+	dev_err(i2c->dev, "after for fill: %d\n", fill);
+
+	for (i = 0; i < fill; i++) {
+		dev_err(i2c->dev, "write: %x\n", data_buf[i]);
+		spacemit_i2c_write_reg(i2c, IWFIFO, data_buf[i]);
+		u32 count = 0;
+		count = spacemit_i2c_read_reg(i2c, IWFIFO_WPTR);
+		dev_err(i2c->dev, "write count: %d\n", count & 0xf);
+	}
+#else
+	spacemit_i2c_write_reg(i2c, IDBR, *i2c->msg_buf++);
+	i2c->unprocessed--;
+#endif	
+}
+
 static void
 spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
-	u32 slave_addr_rw, val;
+	u32 val;
 
 	i2c->dir = i2c->cur_msg->flags & I2C_M_RD;
-	i2c->state = STATE_START;
 
 	if (i2c->cur_msg->flags & I2C_M_RD)
-		slave_addr_rw = ((i2c->cur_msg->addr & 0x7f) << 1) | 1;
+		i2c->slave_addr_rw = ((i2c->cur_msg->addr & 0x7f) << 1) | 1;
 	else
-		slave_addr_rw = (i2c->cur_msg->addr & 0x7f) << 1;
-
-	spacemit_i2c_write_reg(i2c, IDBR, slave_addr_rw);
+		i2c->slave_addr_rw = (i2c->cur_msg->addr & 0x7f) << 1;
+#if I2C_FIFO
+	spacemit_i2c_write_reg(i2c, IWFIFO, i2c->slave_addr_rw | WFIFO_CTRL_START | WFIFO_CTRL_TB);
+	val = spacemit_i2c_read_reg(i2c, ICR);
+	val |= CR_TXBEGIN;
+	spacemit_i2c_write_reg(i2c, ICR, val);
+#else
+	spacemit_i2c_write_reg(i2c, IDBR, i2c->slave_addr_rw);
 
 	val = spacemit_i2c_read_reg(i2c, ICR);
 
@@ -325,12 +395,22 @@ spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	val &= ~CR_STOP;
 	val |= CR_START | CR_TB | CR_DTEIE;
 	spacemit_i2c_write_reg(i2c, ICR, val);
+#endif
+	i2c->state = STATE_START;
 }
 
 static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
-
+#if I2C_FIFO
+	u32 data = 0;
+	data = *i2c->msg_buf;
+	data |= WFIFO_CTRL_TB;
+	data |= WFIFO_CTRL_STOP;
+	spacemit_i2c_write_reg(i2c, IWFIFO, data);
+	dev_err(i2c->dev, "i2c stop write: %x\n", data);
+	i2c->state = STATE_IDLE;
+#else
 	val = spacemit_i2c_read_reg(i2c, ICR);
 
 	val |= CR_STOP | CR_ALDIE | CR_TB;
@@ -339,6 +419,17 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 		val |= CR_ACKNAK;
 
 	spacemit_i2c_write_reg(i2c, ICR, val);
+#endif
+}
+
+static void spacemit_i2c_trigger(struct spacemit_i2c_dev *i2c)
+{
+#if I2C_FIFO
+#else
+	/* trigger next byte */
+	val |= CR_ALDIE | CR_TB;
+	spacemit_i2c_write_reg(i2c, ICR, val);
+#endif
 }
 
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
@@ -380,11 +471,15 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
+#if I2C_FIFO
+	return (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
+#else
 	if (i2c->dir == DIR_READ)
 		return (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
 	else if (i2c->dir == DIR_WRITE)
 		return (!i2c->unprocessed && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
 	return 0;
+#endif
 }
 
 static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
@@ -394,8 +489,7 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 		return;
 
 	if (i2c->unprocessed) {
-		spacemit_i2c_write_reg(i2c, IDBR, *i2c->msg_buf++);
-		i2c->unprocessed--;
+		spacemit_i2c_fill_transmit_buf(i2c);
 		return;
 	}
 
@@ -478,6 +572,8 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
 
+	dev_err(i2c->dev, "isr:%x\n", i2c->status);
+
 	switch (i2c->state) {
 	case STATE_START:
 		spacemit_i2c_handle_start(i2c);
@@ -493,14 +589,10 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	}
 
 	if (i2c->state != STATE_IDLE) {
-		if (spacemit_i2c_is_last_msg(i2c)) {
-			/* trigger next byte with stop */
+		if (spacemit_i2c_is_last_msg(i2c))
 			spacemit_i2c_stop(i2c);
-		} else {
-			/* trigger next byte */
-			val |= CR_ALDIE | CR_TB;
-			spacemit_i2c_write_reg(i2c, ICR, val);
-		}
+/*		else
+			spacemit_i2c_trigger(i2c);*/
 	}
 
 err_out:
@@ -620,7 +712,7 @@ static u32 spacemit_i2c_func(struct i2c_adapter *adap)
 }
 
 static const struct i2c_algorithm spacemit_i2c_algo = {
-	.xfer = spacemit_i2c_xfer,
+	.master_xfer = spacemit_i2c_xfer,
 	.functionality = spacemit_i2c_func,
 };
 
