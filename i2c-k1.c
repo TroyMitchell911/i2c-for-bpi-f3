@@ -330,6 +330,8 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 		i2c->status = 0;
 		i2c->unprocessed = i2c->cur_msg->len;
 
+		reinit_completion(&i2c->complete);
+
 		spacemit_i2c_start(i2c);
 
 		time_left = wait_for_completion_timeout(&i2c->complete,
@@ -344,8 +346,6 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 		if (unlikely(i2c->err))
 			return spacemit_i2c_handle_err(i2c);
-
-		init_completion(&i2c->complete);
 	}
 
 	return 0;
@@ -494,9 +494,6 @@ err_out:
 		spacemit_i2c_write_reg(i2c, ICR, ctrl);
 
 		spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
-
-		i2c->state = STATE_IDLE;
-		complete(&i2c->complete);
 	}
 
 	return IRQ_HANDLED;
@@ -529,8 +526,6 @@ static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	spacemit_i2c_calc_timeout(i2c);
 
 	spacemit_i2c_init(i2c);
-
-	reinit_completion(&i2c->complete);
 
 	spacemit_i2c_enable(i2c);
 	enable_irq(i2c->irq);
