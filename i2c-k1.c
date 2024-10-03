@@ -373,7 +373,20 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_prepare_read(spacemit_i2c_dev *i2c)
 {
 #if I2C_FIFO
+	u32 data_buf[I2C_RX_FIFO_DEPTH];
+	u16 len;
+	u32 unprocessed;
 
+	unprocessed = i2c->unprocessed;
+	if (spacemit_i2c_is_last_msg(i2c))
+		unprocessed -= 1;
+
+	len = min_t(size_t,
+		    unprocessed - 1,
+		    I2C_TX_FIFO_DEPTH - fill);
+
+	while (len > 0)
+		*(i2c->msg_buf++) = spacemit_i2c_read_reg(i2c, IRFIFO);
 #else
 	*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
 	i2c->unprocessed--;
