@@ -150,6 +150,7 @@ struct spacemit_i2c_dev {
 	u8 *msg_buf;
 	/* recording the number of messages transmitted */
 	size_t unprocessed;
+	bool fifo_disable;
 
 	enum spacemit_i2c_state state;
 	enum spacemit_i2c_dir dir;
@@ -738,6 +739,14 @@ static const struct i2c_algorithm spacemit_i2c_algo = {
 	.master_xfer = spacemit_i2c_xfer,
 	.functionality = spacemit_i2c_func,
 };
+
+static void spacemit_i2c_parse_dt(struct platform_device *pdev,
+				  struct spacemit_i2c_dev *i2c)
+{
+	struct device_node *dnode = pdev->dev.of_node;
+
+	i2c->fifo_disable = of_property_read_bool(dnode, "fifo-disable");
+}
 
 static int spacemit_i2c_probe(struct platform_device *pdev)
 {
