@@ -25,6 +25,21 @@ properties:
   clocks:
     maxItems: 1
 
+  clock-frequency:
+    description: |
+      Desired I2C bus clock frequency in Hz. As only fast and high-speed
+      modes are supported by hardware, possible values are 100000 and 400000.
+    enum: [100000, 400000]
+    default: 100000
+
+  fifo-disable:
+    type: boolean
+    description: |
+      Whether to disable FIFO. If FIFO is turned on, it will be interrupted
+      only when the FIFO depth is reached, which can reduce the frequency
+      of interruption.
+    default: false
+
 unevaluatedProperties: false
 
 required:
@@ -43,6 +58,7 @@ examples:
         interrupts = <36>;
         clocks = <&ccu 90>;
         resets = <&reset 27>;
+        clock-frequency = <100000>;
     };
 
 ...
