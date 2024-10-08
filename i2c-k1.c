@@ -211,7 +211,9 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 	int ret = 0;
 	u32 val;
 
-	if (likely(!(spacemit_i2c_read_reg(i2c, ISR) & (SR_UB | SR_IBB))))
+	val = spacemit_i2c_read_reg(i2c, ISR);
+
+	if (likely(!(val & (SR_UB | SR_IBB))))
 		return 0;
 
 	ret = readl_poll_timeout(i2c->base + ISR,
@@ -279,8 +281,7 @@ spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 	spacemit_i2c_write_reg(i2c, ISR, mask & I2C_INT_STATUS_MASK);
 }
 
-static void
-spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
+static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
 	u32 slave_addr_rw, val;
 
@@ -412,13 +413,11 @@ static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 	if (!i2c->err)
 		return 0;
 
-	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n",
-		i2c->status);
+	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n",	i2c->status);
 
 	if (i2c->err & (SR_BED | SR_ALD))
 		spacemit_i2c_reset(i2c);
 
-	/* try transfer again */
 	if (i2c->err & (SR_RXOV | SR_ALD))
 		return -EAGAIN;
 
@@ -432,16 +431,13 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	status = spacemit_i2c_read_reg(i2c, ISR);
 
-	/* check if a valid interrupt status */
 	if (!status)
 		return IRQ_HANDLED;
 
 	i2c->status = status;
 
-	/* bus error, rx overrun, arbitration lost */
 	i2c->err = status & (SR_BED | SR_RXOV | SR_ALD);
 
-	/* clear interrupt status bits[31:18] */
 	spacemit_i2c_clear_int_status(i2c, status);
 
 	if (unlikely(i2c->err))
@@ -570,8 +566,8 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 	spacemit_i2c_disable(i2c);
 
 	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN)))
-		dev_alert(i2c->dev,
-			  "i2c transfer failed, ret %d err 0x%x\n", ret, i2c->err);
+		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%x\n",
+			  ret, i2c->err);
 
 	return ret < 0 ? ret : num;
 }
@@ -675,7 +671,6 @@ static const struct of_device_id spacemit_i2c_dt_match[] = {
 	{ .compatible = "spacemit,k1-i2c", },
 	{ /* sentinel */ }
 };
-
 MODULE_DEVICE_TABLE(of, spacemit_i2c_dt_match);
 
 static struct platform_driver spacemit_i2c_driver = {
@@ -686,7 +681,6 @@ static struct platform_driver spacemit_i2c_driver = {
 		.of_match_table = spacemit_i2c_dt_match,
 	},
 };
-
 module_platform_driver(spacemit_i2c_driver);
 
 MODULE_LICENSE("GPL");
