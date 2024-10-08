@@ -400,9 +400,12 @@ static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->dir == DIR_READ) {
+	if(i2c->dir == DIR_READ) {
 		i2c->state = STATE_READ;
-	} else if (i2c->dir == DIR_WRITE) {
+		return;
+	}
+
+	if (i2c->state == DIR_WRITE) {
 		i2c->state = STATE_WRITE;
 		spacemit_i2c_handle_write(i2c);
 	}
