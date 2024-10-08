@@ -298,7 +298,7 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 #if I2C_FIFO
 	val |= CR_FIFOEN;
 	val |= CR_TXEIE;
-	val |= CR_RXHFIE;
+//	val |= CR_RXHFIE;
 	//val |= CR_TXDONEIE;
 #else
 	/*
@@ -377,18 +377,56 @@ static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 	u32 data_buf[I2C_RX_FIFO_DEPTH];
 	u16 len;
 	u32 unprocessed;
-	int fill = 0;
-
+	int fill = 0, i;
+	u32 data;
+	char *msg_buf = i2c->msg_buf;
+/*
+	if (i2c->unprocessed == i2c->cur_msg->len) {
+		data = i2c->slave_addr_rw;
+		data |= WFIFO_CTRL_TB | WFIFO_CTRL_START;
+		data_buf[fill++] = data;
+	}
+*/
 	unprocessed = i2c->unprocessed;
 	if (spacemit_i2c_is_last_msg(i2c))
 		unprocessed -= 1;
 
 	len = min_t(size_t,
-		    unprocessed - 1,
+		    unprocessed,
 		    I2C_TX_FIFO_DEPTH - fill);
 
-	while (len > 0)
+	dev_err(i2c->dev, "fill len: %d\n", len);
+	len += fill;
+
+	for (; fill < len; fill ++) {
+		dev_err(i2c->dev, "fill:%d\n", fill);
+		data = *(msg_buf++);
+		data |= WFIFO_CTRL_TB;
+//		if(i2c->unprocessed == 0)
+//			data |= WFIFO_CTRL_STOP;
+		data_buf[fill] = data;
+	}
+
+	dev_err(i2c->dev, "after for fill: %d\n", fill);
+
+	for (i = 0; i < fill; i++) {
+		dev_err(i2c->dev, "write: %x\n", data_buf[i]);
+		spacemit_i2c_write_reg(i2c, IWFIFO, data_buf[i]);
+		u32 count = 0;
+		count = spacemit_i2c_read_reg(i2c, IWFIFO_WPTR);
+		dev_err(i2c->dev, "write count: %d\n", count & 0xf);
+	}
+
+	len = min_t(size_t,
+		    unprocessed,
+		    I2C_TX_FIFO_DEPTH - fill);
+
+	while (len > 0) {
 		*(i2c->msg_buf++) = spacemit_i2c_read_reg(i2c, IRFIFO);
+		i2c->unprocessed --;
+		len --;
+		dev_err(i2c->dev, "prepare read: %x\n", *(i2c->msg_buf - 1));
+	}
 #else
 	*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
 	i2c->unprocessed--;
@@ -499,7 +537,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
 #if I2C_FIFO
-	return (i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
+	return (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
 #else
 	if (i2c->dir == DIR_READ)
 		return (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
@@ -601,12 +639,15 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	switch (i2c->state) {
 	case STATE_START:
+		dev_err(i2c->dev, "handle start\n");
 		spacemit_i2c_handle_start(i2c);
 		break;
 	case STATE_READ:
+		dev_err(i2c->dev, "handle read\n");
 		spacemit_i2c_handle_read(i2c);
 		break;
 	case STATE_WRITE:
+		dev_err(i2c->dev, "handle write\n");
 		spacemit_i2c_handle_write(i2c);
 		break;
 	default:
