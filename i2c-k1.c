@@ -388,12 +388,13 @@ static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 	}
 */
 	unprocessed = i2c->unprocessed;
-	if (spacemit_i2c_is_last_msg(i2c))
-		unprocessed -= 1;
 
 	len = min_t(size_t,
 		    unprocessed,
 		    I2C_TX_FIFO_DEPTH - fill);
+
+	if(len == i2c->unprocessed && len != 1)
+		len -= 1;
 
 	dev_err(i2c->dev, "fill len: %d\n", len);
 	len += fill;
@@ -402,8 +403,6 @@ static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 		dev_err(i2c->dev, "fill:%d\n", fill);
 		data = *(msg_buf++);
 		data |= WFIFO_CTRL_TB;
-//		if(i2c->unprocessed == 0)
-//			data |= WFIFO_CTRL_STOP;
 		data_buf[fill] = data;
 	}
 
@@ -416,10 +415,6 @@ static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 		count = spacemit_i2c_read_reg(i2c, IWFIFO_WPTR);
 		dev_err(i2c->dev, "write count: %d\n", count & 0xf);
 	}
-
-	len = min_t(size_t,
-		    unprocessed,
-		    I2C_TX_FIFO_DEPTH - fill);
 
 	while (len > 0) {
 		*(i2c->msg_buf++) = spacemit_i2c_read_reg(i2c, IRFIFO);
@@ -474,7 +469,6 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 		data |= WFIFO_CTRL_ACKNAK;
 	spacemit_i2c_write_reg(i2c, IWFIFO, data);
 	dev_err(i2c->dev, "i2c stop write: %x\n", data);
-	i2c->state = STATE_IDLE;
 #else
 	val = spacemit_i2c_read_reg(i2c, ICR);
 
