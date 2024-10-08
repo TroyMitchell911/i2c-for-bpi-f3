@@ -340,7 +340,7 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 		unprocessed -= 1;
 
 	len = min_t(size_t,
-		    unprocessed - 1,
+		    unprocessed,
 		    I2C_TX_FIFO_DEPTH - fill);
 
 	dev_err(i2c->dev, "fill len: %d\n", len);
@@ -499,7 +499,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
 #if I2C_FIFO
-	return (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
+	return (i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
 #else
 	if (i2c->dir == DIR_READ)
 		return (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
