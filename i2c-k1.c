@@ -371,12 +371,13 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 #endif	
 }
 
-static void spacemit_i2c_prepare_read(spacemit_i2c_dev *i2c)
+static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 {
 #if I2C_FIFO
 	u32 data_buf[I2C_RX_FIFO_DEPTH];
 	u16 len;
 	u32 unprocessed;
+	int fill = 0;
 
 	unprocessed = i2c->unprocessed;
 	if (spacemit_i2c_is_last_msg(i2c))
