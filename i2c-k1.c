@@ -138,7 +138,7 @@ struct spacemit_i2c_dev {
 	int msg_num;
 	struct i2c_msg *cur_msg;
 
-	/* index of the current message being processed */	
+	/* index of the current message being processed */
 	int msg_idx;
 	u8 *msg_buf;
 	/* the number of unprocessed bytes remaining in each message  */
@@ -407,7 +407,7 @@ static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 {
-	if(i2c->dir == DIR_READ) {
+	if (i2c->dir == DIR_READ) {
 		i2c->state = STATE_READ;
 		return;
 	}
