@@ -195,16 +195,17 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 	/* if bus is locked, reset unit. 0: locked */
 	status = spacemit_i2c_read_reg(i2c, IBMR);
 
-	if (!(status & BMR_SDA) || !(status & BMR_SCL)) {
-		spacemit_i2c_reset(i2c);
-		usleep_range(10, 20);
+	if ((status & BMR_SDA) && (status & BMR_SCL))
+		return;
 
-		/* check scl status again */
-		status = spacemit_i2c_read_reg(i2c, IBMR);
+	spacemit_i2c_reset(i2c);
+	usleep_range(10, 20);
 
-		if (!(status & BMR_SCL))
-			dev_alert(i2c->dev, "unit reset failed\n");
-	}
+	/* check scl status again */
+	status = spacemit_i2c_read_reg(i2c, IBMR);
+
+	if (!(status & BMR_SCL))
+		dev_alert(i2c->dev, "unit reset failed\n");
 }
 
 static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
