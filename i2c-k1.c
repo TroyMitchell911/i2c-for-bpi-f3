@@ -9,7 +9,6 @@
  #include <linux/module.h>
  #include <linux/of_address.h>
  #include <linux/platform_device.h>
- #include <linux/reset.h>
 
 /* spacemit i2c registers */
 #define ICR          0x0		/* Control Register */
@@ -133,7 +132,6 @@ struct spacemit_i2c_dev {
 
 	/* hardware resources */
 	void __iomem *base;
-	struct reset_control *resets;
 	int irq;
 
 	struct i2c_msg *msgs;
@@ -610,12 +608,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		return dev_err_probe(&pdev->dev, ret, "failed to do ioremap");
 	}
 
-	i2c->resets = devm_reset_control_get(&pdev->dev, NULL);
-	if (IS_ERR(i2c->resets)) {
-		ret = PTR_ERR(i2c->resets);
-		return dev_err_probe(&pdev->dev, ret, "failed to get resets");
-	}
-
 	i2c->irq = platform_get_irq(pdev, 0);
 	if (i2c->irq < 0) {
 		ret = i2c->irq;
@@ -637,10 +629,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		ret = PTR_ERR(clk);
 		return dev_err_probe(&pdev->dev, ret, "failed to enable clock");
 	}
-
-	reset_control_assert(i2c->resets);
-	usleep_range(200, 300);
-	reset_control_deassert(i2c->resets);
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
