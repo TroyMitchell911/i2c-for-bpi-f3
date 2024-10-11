@@ -405,7 +405,7 @@ static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 		return;
 	}
 
-	if (i2c->state == DIR_WRITE) {
+	if (i2c->dir == DIR_WRITE) {
 		i2c->state = STATE_WRITE;
 		spacemit_i2c_handle_write(i2c);
 	}
@@ -449,6 +449,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	val = spacemit_i2c_read_reg(i2c, ICR);
 
 	val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
+	spacemit_i2c_write_reg(i2c, ICR, val);
 
 	switch (i2c->state) {
 	case STATE_START:
@@ -493,6 +494,9 @@ err_out:
 		spacemit_i2c_write_reg(i2c, ICR, ctrl);
 
 		spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
+
+		i2c->state = STATE_IDLE;
+		complete(&i2c->complete);
 	}
 
 	return IRQ_HANDLED;
