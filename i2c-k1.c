@@ -425,10 +425,36 @@ static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 	return (i2c->status & SR_ACKNAK) ? -ENXIO : -EIO;
 }
 
+static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
+{
+	u32 val;
+	/*
+	 * send transaction complete signal:
+	 * error happens, detect master stop
+	 */
+	if (likely(i2c->err || (i2c->status & SR_MSD))) {
+		/*
+		 * Here the transaction is already done, we don't need any
+		 * other interrupt signals from now, in case any interrupt
+		 * happens before spacemit_i2c_xfer to disable irq and i2c unit,
+		 * we mask all the interrupt signals and clear the interrupt
+		 * status.
+		 */
+		val = spacemit_i2c_read_reg(i2c, ICR);
+		val &= ~I2C_INT_CTRL_MASK;
+		spacemit_i2c_write_reg(i2c, ICR, val);
+
+		spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
+
+		i2c->state = STATE_IDLE;
+		complete(&i2c->complete);
+	}
+}
+
 static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 {
 	struct spacemit_i2c_dev *i2c = devid;
-	u32 status, ctrl, val;
+	u32 status, val;
 
 	status = spacemit_i2c_read_reg(i2c, ISR);
 
@@ -475,28 +501,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	}
 
 err_out:
-	/*
-	 * send transaction complete signal:
-	 * error happens, detect master stop
-	 */
-	if (likely(i2c->err || (status & SR_MSD))) {
-		/*
-		 * Here the transaction is already done, we don't need any
-		 * other interrupt signals from now, in case any interrupt
-		 * happens before spacemit_i2c_xfer to disable irq and i2c unit,
-		 * we mask all the interrupt signals and clear the interrupt
-		 * status.
-		 */
-		ctrl = spacemit_i2c_read_reg(i2c, ICR);
-		ctrl &= ~I2C_INT_CTRL_MASK;
-		spacemit_i2c_write_reg(i2c, ICR, ctrl);
-
-		spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
-
-		i2c->state = STATE_IDLE;
-		complete(&i2c->complete);
-	}
-
+	spacemit_i2c_err_check(i2c);
 	return IRQ_HANDLED;
 }
 
