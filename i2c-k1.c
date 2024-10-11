@@ -667,13 +667,11 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int spacemit_i2c_remove(struct platform_device *pdev)
+static void spacemit_i2c_remove(struct platform_device *pdev)
 {
 	struct spacemit_i2c_dev *i2c = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&i2c->adapt);
-
-	return 0;
 }
 
 static const struct of_device_id spacemit_i2c_dt_match[] = {
@@ -684,7 +682,7 @@ MODULE_DEVICE_TABLE(of, spacemit_i2c_dt_match);
 
 static struct platform_driver spacemit_i2c_driver = {
 	.probe = spacemit_i2c_probe,
-	.remove = spacemit_i2c_remove,
+	.remove_new = spacemit_i2c_remove,
 	.driver = {
 		.name = "i2c-k1",
 		.of_match_table = spacemit_i2c_dt_match,
