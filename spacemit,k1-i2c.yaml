@@ -19,9 +19,6 @@ properties:
   interrupts:
     maxItems: 1
 
-  resets:
-    maxItems: 1
-
   clocks:
     maxItems: 1
 
@@ -46,7 +43,6 @@ required:
   - compatible
   - reg
   - interrupts
-  - resets
   - clocks
 
 examples:
