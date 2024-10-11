@@ -57,7 +57,6 @@ examples:
         interrupt-parent = <&plic>;
         interrupts = <36>;
         clocks = <&ccu 90>;
-        resets = <&reset 27>;
         clock-frequency = <100000>;
     };
 

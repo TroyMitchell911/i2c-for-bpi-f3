@@ -139,6 +139,7 @@ struct spacemit_i2c_dev {
 	struct i2c_msg *cur_msg;
 	int msg_idx;
 	u8 *msg_buf;
+	/* the number of unprocessed bytes remaining in each message  */
 	size_t unprocessed;
 
 	enum spacemit_i2c_state state;
