@@ -137,6 +137,8 @@ struct spacemit_i2c_dev {
 	struct i2c_msg *msgs;
 	int msg_num;
 	struct i2c_msg *cur_msg;
+
+	/* index of the current message being processed */	
 	int msg_idx;
 	u8 *msg_buf;
 	/* the number of unprocessed bytes remaining in each message  */
@@ -353,10 +355,15 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->dir == DIR_READ)
-		return (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
-	else if (i2c->dir == DIR_WRITE)
-		return (!i2c->unprocessed && i2c->msg_idx == i2c->msg_num - 1) ? 1 : 0;
+	if (i2c->dir == DIR_READ) {
+		if (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1)
+			return 1;
+		return 0;
+	} else if (i2c->dir == DIR_WRITE) {
+		if (!i2c->unprocessed && i2c->msg_idx == i2c->msg_num - 1)
+			return 1;
+		return 0;
+	}
 	return 0;
 }
 
