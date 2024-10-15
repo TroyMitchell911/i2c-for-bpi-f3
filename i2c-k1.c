@@ -107,7 +107,7 @@
 #define I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
 				CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
 				CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
-				CR_MSDIE)
+				CR_MSDIE | CR_FIFOEN)
 
 /* i2c bus recover timeout: us */
 #define I2C_BUS_RECOVER_TIMEOUT		(100000)
@@ -270,6 +270,9 @@ static void spacemit_i2c_check_bus_release(struct spacemit_i2c_dev *i2c)
 	}
 }
 
+static inline void
+spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask);
+
 static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 {
 	u32 val = 0;
@@ -298,6 +301,7 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 #if I2C_FIFO
 	val |= CR_FIFOEN;
 	val |= CR_TXEIE;
+	spacemit_i2c_clear_int_status(i2c);
 //	val |= CR_RXHFIE;
 	//val |= CR_TXDONEIE;
 #else
@@ -311,7 +315,6 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 	val |= CR_DRFIE;
 #endif
 	spacemit_i2c_write_reg(i2c, ICR, val);
-	spacemit_i2c_write_reg(i2c, ISR, 0x10000000);
 }
 
 static inline void
