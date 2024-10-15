@@ -328,15 +328,9 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 	u16 len;
 	u32 data_buf[I2C_TX_FIFO_DEPTH * 2];
 	u32 data;
-/*
-	if (i2c->unprocessed == i2c->cur_msg->len) {
-		data = i2c->slave_addr_rw;
-		data |= WFIFO_CTRL_TB | WFIFO_CTRL_START;
-		data_buf[fill++] = data;
-	}
-*/
+	
 	unprocessed = i2c->unprocessed;
-	if (spacemit_i2c_is_last_msg(i2c))
+	if (i2c->msg_idx == i2c->msg_num - 1)
 		unprocessed -= 1;
 
 	len = min_t(size_t,
@@ -469,6 +463,9 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 		data |= WFIFO_CTRL_ACKNAK;
 	spacemit_i2c_write_reg(i2c, IWFIFO, data);
 	dev_err(i2c->dev, "i2c stop write: %x\n", data);
+	if (i2c->dir == DIR_READ) {
+		*(i2c->msg_buf++) = spacemit_i2c_read_reg(i2c, IRFIFO);
+	}
 #else
 	val = spacemit_i2c_read_reg(i2c, ICR);
 
@@ -479,6 +476,7 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 
 	spacemit_i2c_write_reg(i2c, ICR, val);
 #endif
+	i2c->unprocessed --;
 }
 
 static void spacemit_i2c_trigger(struct spacemit_i2c_dev *i2c)
@@ -506,6 +504,8 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 		i2c->err = 0;
 		i2c->status = 0;
 		i2c->unprocessed = i2c->cur_msg->len;
+		
+		reinit_completion(&i2c->complete);
 
 		spacemit_i2c_start(i2c);
 
@@ -521,8 +521,6 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 		if (unlikely(i2c->err))
 			return spacemit_i2c_handle_err(i2c);
-
-		init_completion(&i2c->complete);
 	}
 
 	return 0;
@@ -559,6 +557,8 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 {
+	dev_err(i2c->dev, "handle read: %d\n", i2c->unprocessed);
+	
 	if (i2c->unprocessed)
 		spacemit_i2c_prepare_read(i2c);
 
@@ -579,10 +579,13 @@ static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 {
 	if (i2c->dir == DIR_READ) {
 		i2c->state = STATE_READ;
+		dev_err(i2c->dev, "start: unprocessed: %d\n", i2c->unprocessed);
 	} else if (i2c->dir == DIR_WRITE) {
 		i2c->state = STATE_WRITE;
 		spacemit_i2c_handle_write(i2c);
 	}
+
+	dev_err(i2c->dev, "start:i2c->state: %d\n", i2c->state);
 }
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
@@ -649,6 +652,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	}
 
 	if (i2c->state != STATE_IDLE) {
+		dev_err(i2c->dev, "i2c->state : %d\n", i2c->state);
 		if (spacemit_i2c_is_last_msg(i2c))
 			spacemit_i2c_stop(i2c);
 /*		else
@@ -660,7 +664,9 @@ err_out:
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
+	dev_err(i2c->dev, "irq handler status: %x", status);
 	if (likely(i2c->err || (status & SR_MSD))) {
+		dev_err(i2c->dev, "irq handler done\n");
 		/*
 		 * Here the transaction is already done, we don't need any
 		 * other interrupt signals from now, in case any interrupt
@@ -711,8 +717,6 @@ static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 
 	/* clear all interrupt status */
 	spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
-
-	reinit_completion(&i2c->complete);
 
 	spacemit_i2c_enable(i2c);
 	enable_irq(i2c->irq);
