@@ -23,7 +23,7 @@ properties:
     maxItems: 1
 
   clock-frequency:
-    description: |
+    description:
       Desired I2C bus clock frequency in Hz. As only fast and high-speed
       modes are supported by hardware, possible values are 100000 and 400000.
     enum: [100000, 400000]
@@ -31,7 +31,7 @@ properties:
 
   fifo-disable:
     type: boolean
-    description: |
+    description:
       Whether to disable FIFO. If FIFO is turned on, it will be interrupted
       only when the FIFO depth is reached, which can reduce the frequency
       of interruption.
