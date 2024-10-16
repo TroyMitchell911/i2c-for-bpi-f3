@@ -37,13 +37,13 @@ properties:
       of interruption.
     default: false
 
-unevaluatedProperties: false
-
 required:
   - compatible
   - reg
   - interrupts
   - clocks
+
+unevaluatedProperties: false
 
 examples:
   - |
