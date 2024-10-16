@@ -29,12 +29,12 @@ properties:
     enum: [100000, 400000]
     default: 100000
 
-  fifo-disable:
+  spacemit,fifo-disable:
     type: boolean
     description:
-      Whether to disable FIFO. If FIFO is turned on, it will be interrupted
-      only when the FIFO depth is reached, which can reduce the frequency
-      of interruption.
+      Whether to disable the hardware FIFO. If the hardware FIFO is enabled, 
+      interrupts will only occur when the FIFO depth is reached, which can 
+      reduce the frequency of interruptions.
     default: false
 
 required:
