@@ -14,7 +14,7 @@ properties:
     const: spacemit,k1-i2c
 
   reg:
-    maxItems: 1
+    maxItems: 2
 
   interrupts:
     maxItems: 1
