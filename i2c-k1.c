@@ -577,7 +577,7 @@ static u32 spacemit_i2c_func(struct i2c_adapter *adap)
 }
 
 static const struct i2c_algorithm spacemit_i2c_algo = {
-	.master_xfer = spacemit_i2c_xfer,
+	.xfer = spacemit_i2c_xfer,
 	.functionality = spacemit_i2c_func,
 };
 
@@ -599,7 +599,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		return dev_err_probe(&pdev->dev, PTR_ERR(i2c->base), "failed to do ioremap");
 
 	i2c->irq = platform_get_irq(pdev, 0);
-	if (i2c->irq < 0) {
+	if (i2c->irq < 0)
 		return dev_err_probe(&pdev->dev, i2c->irq, "failed to get irq resource");
 
 	ret = devm_request_irq(i2c->dev, i2c->irq,
@@ -637,12 +637,11 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int spacemit_i2c_remove(struct platform_device *pdev)
+static void spacemit_i2c_remove(struct platform_device *pdev)
 {
 	struct spacemit_i2c_dev *i2c = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&i2c->adapt);
-	return 0;
 }
 
 static const struct of_device_id spacemit_i2c_dt_match[] = {
