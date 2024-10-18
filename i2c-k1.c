@@ -183,7 +183,6 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 
 	/* if bus is locked, reset unit. 0: locked */
 	status = readl(i2c->base + IBMR);
-
 	if ((status & BMR_SDA) && (status & BMR_SCL))
 		return;
 
@@ -192,9 +191,8 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 
 	/* check scl status again */
 	status = readl(i2c->base + IBMR);
-
 	if (!(status & BMR_SCL))
-		dev_alert(i2c->dev, "unit reset failed\n");
+		dev_warn_ratelimited(i2c->dev, "unit reset failed\n");
 }
 
 static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
@@ -203,7 +201,6 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 	u32 val;
 
 	val = readl(i2c->base + ISR);
-
 	if (likely(!(val & (SR_UB | SR_IBB))))
 		return 0;
 
@@ -212,7 +209,6 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 				 !(val & (SR_UB | SR_IBB)),
 				 1500,
 				 I2C_BUS_RECOVER_TIMEOUT);
-
 	if (unlikely(ret)) {
 		spacemit_i2c_reset(i2c);
 		ret = -EAGAIN;
@@ -328,7 +324,6 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 		time_left = wait_for_completion_timeout(&i2c->complete,
 							i2c->adapt.timeout);
-
 		if (unlikely(time_left == 0)) {
 			dev_alert(i2c->dev, "msg completion timeout\n");
 			spacemit_i2c_bus_reset(i2c);
@@ -455,7 +450,6 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	u32 status, val;
 
 	status = readl(i2c->base + ISR);
-
 	if (!status)
 		return IRQ_HANDLED;
 
@@ -536,12 +530,10 @@ static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 
 	/* i2c wait for bus busy */
 	ret = spacemit_i2c_recover_bus_busy(i2c);
-
 	if (unlikely(ret))
 		return ret;
 
 	ret = spacemit_i2c_xfer_msg(i2c);
-
 	if (unlikely(ret < 0)) {
 		dev_dbg(i2c->dev, "i2c transfer error\n");
 		/* timeout error should not be overridden, and the transfer
@@ -565,7 +557,6 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 	i2c->msg_num = num;
 
 	ret = spacemit_i2c_xfer_core(i2c);
-
 	if (likely(!ret))
 		spacemit_i2c_check_bus_release(i2c);
 
@@ -597,41 +588,32 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	struct clk *clk;
 	int ret = 0;
 
-	i2c = devm_kzalloc(&pdev->dev,
-			   sizeof(struct spacemit_i2c_dev),
-			   GFP_KERNEL);
+	i2c = devm_kzalloc(&pdev->dev, sizeof(*i2c), GFP_KERNEL);
 	if (!i2c)
 		return -ENOMEM;
 
 	i2c->dev = &pdev->dev;
 
 	i2c->base = devm_platform_ioremap_resource(pdev, 0);
-	if (!i2c->base) {
-		ret = PTR_ERR(i2c->base);
-		return dev_err_probe(&pdev->dev, ret, "failed to do ioremap");
-	}
+	if (!i2c->base)
+		return dev_err_probe(&pdev->dev, PTR_ERR(i2c->base), "failed to do ioremap");
 
 	i2c->irq = platform_get_irq(pdev, 0);
 	if (i2c->irq < 0) {
-		ret = i2c->irq;
-		return dev_err_probe(&pdev->dev, ret, "failed to get irq resource");
-	}
+		return dev_err_probe(&pdev->dev, i2c->irq, "failed to get irq resource");
 
 	ret = devm_request_irq(i2c->dev, i2c->irq,
 			       spacemit_i2c_irq_handler,
 			       IRQF_NO_SUSPEND | IRQF_ONESHOT,
 			       dev_name(i2c->dev), i2c);
-
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "failed to request irq");
 
 	disable_irq(i2c->irq);
 
 	clk = devm_clk_get_enabled(&pdev->dev, NULL);
-	if (IS_ERR(clk)) {
-		ret = PTR_ERR(clk);
-		return dev_err_probe(&pdev->dev, ret, "failed to enable clock");
-	}
+	if (IS_ERR(clk))
+		return dev_err_probe(&pdev->dev, PTR_ERR(clk), "failed to enable clock");
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
@@ -647,7 +629,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	init_completion(&i2c->complete);
 
 	ret = i2c_add_numbered_adapter(&i2c->adapt);
-
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "failed to add i2c adapter");
 
