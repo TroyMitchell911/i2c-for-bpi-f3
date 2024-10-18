@@ -29,14 +29,6 @@ properties:
     enum: [100000, 400000]
     default: 100000
 
-  spacemit,fifo-disable:
-    type: boolean
-    description:
-      Whether to disable the hardware FIFO. If the hardware FIFO is enabled, 
-      interrupts will only occur when the FIFO depth is reached, which can 
-      reduce the frequency of interruptions.
-    default: false
-
 required:
   - compatible
   - reg
