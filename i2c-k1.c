@@ -151,8 +151,6 @@ struct spacemit_i2c_dev {
 	u32 err;
 };
 
-static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c);
-
 static void spacemit_i2c_enable(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
@@ -176,6 +174,8 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 	udelay(5);
 	writel(0, i2c->base + ICR);
 }
+
+static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c);
 
 static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 {
@@ -204,11 +204,8 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 	if (likely(!(val & (SR_UB | SR_IBB))))
 		return 0;
 
-	ret = readl_poll_timeout(i2c->base + ISR,
-				 val,
-				 !(val & (SR_UB | SR_IBB)),
-				 1500,
-				 I2C_BUS_RECOVER_TIMEOUT);
+	ret = readl_poll_timeout(i2c->base + ISR, val, !(val & (SR_UB | SR_IBB)),
+				 1500, I2C_BUS_RECOVER_TIMEOUT);
 	if (unlikely(ret)) {
 		spacemit_i2c_reset(i2c);
 		ret = -EAGAIN;
@@ -340,15 +337,13 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->dir == DIR_READ) {
+	if (i2c->dir == DIR_READ)
 		if (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1)
 			return 1;
-		return 0;
-	} else if (i2c->dir == DIR_WRITE) {
+	else if (i2c->dir == DIR_WRITE)
 		if (!i2c->unprocessed && i2c->msg_idx == i2c->msg_num - 1)
 			return 1;
-		return 0;
-	}
+
 	return 0;
 }
 
@@ -504,12 +499,14 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 
 	while (idx < i2c->msg_num) {
 		cnt += (i2c->msgs + idx)->len + 1;
-
 		idx++;
 	}
 
 	freq = I2C_FAST_MODE_FREQ;
-
+	/*
+	 * multiply by 9 because each byte in I2C transmission requires
+	 * 9 clock cycles: 8 bits of data plus 1 ACK/NACK bit.
+	 */
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
 
 	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) / i2c->msg_num;
@@ -565,8 +562,7 @@ spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 	spacemit_i2c_disable(i2c);
 
 	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN)))
-		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%x\n",
-			  ret, i2c->err);
+		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%x\n", ret, i2c->err);
 
 	return ret < 0 ? ret : num;
 }
@@ -602,10 +598,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (i2c->irq < 0)
 		return dev_err_probe(&pdev->dev, i2c->irq, "failed to get irq resource");
 
-	ret = devm_request_irq(i2c->dev, i2c->irq,
-			       spacemit_i2c_irq_handler,
-			       IRQF_NO_SUSPEND | IRQF_ONESHOT,
-			       dev_name(i2c->dev), i2c);
+	ret = devm_request_irq(i2c->dev, i2c->irq, spacemit_i2c_irq_handler,
+			       IRQF_NO_SUSPEND | IRQF_ONESHOT, dev_name(i2c->dev), i2c);
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "failed to request irq");
 
@@ -644,18 +638,18 @@ static void spacemit_i2c_remove(struct platform_device *pdev)
 	i2c_del_adapter(&i2c->adapt);
 }
 
-static const struct of_device_id spacemit_i2c_dt_match[] = {
+static const struct of_device_id spacemit_i2c_of_match[] = {
 	{ .compatible = "spacemit,k1-i2c", },
 	{ /* sentinel */ }
 };
-MODULE_DEVICE_TABLE(of, spacemit_i2c_dt_match);
+MODULE_DEVICE_TABLE(of, spacemit_i2c_of_match);
 
 static struct platform_driver spacemit_i2c_driver = {
 	.probe = spacemit_i2c_probe,
 	.remove = spacemit_i2c_remove,
 	.driver = {
 		.name = "i2c-k1",
-		.of_match_table = spacemit_i2c_dt_match,
+		.of_match_table = spacemit_i2c_of_match,
 	},
 };
 module_platform_driver(spacemit_i2c_driver);
