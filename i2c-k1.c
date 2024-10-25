@@ -300,8 +300,7 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 
 #if I2C_FIFO
 	val |= CR_FIFOEN;
-	val |= CR_TXEIE;
-	spacemit_i2c_clear_int_status(i2c);
+//	val |= CR_TXEIE;
 //	val |= CR_RXHFIE;
 	//val |= CR_TXDONEIE;
 #else
@@ -397,13 +396,10 @@ static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 	len += fill;
 
 	for (; fill < len; fill ++) {
-		dev_err(i2c->dev, "fill:%d\n", fill);
 		data = *(msg_buf++);
 		data |= WFIFO_CTRL_TB;
 		data_buf[fill] = data;
 	}
-
-	dev_err(i2c->dev, "after for fill: %d\n", fill);
 
 	for (i = 0; i < fill; i++) {
 		dev_err(i2c->dev, "write: %x\n", data_buf[i]);
@@ -440,6 +436,7 @@ spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	spacemit_i2c_write_reg(i2c, IWFIFO, i2c->slave_addr_rw | WFIFO_CTRL_START | WFIFO_CTRL_TB);
 	val = spacemit_i2c_read_reg(i2c, ICR);
 	val |= CR_TXBEGIN;
+	val |= CR_TXEIE;
 	spacemit_i2c_write_reg(i2c, ICR, val);
 #else
 	spacemit_i2c_write_reg(i2c, IDBR, i2c->slave_addr_rw);
@@ -468,6 +465,7 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 	dev_err(i2c->dev, "i2c stop write: %x\n", data);
 	if (i2c->dir == DIR_READ) {
 		*(i2c->msg_buf++) = spacemit_i2c_read_reg(i2c, IRFIFO);
+		dev_err(i2c->dev, "i2c stop read: %x\n", *(i2c->msg_buf - 1));
 	}
 #else
 	val = spacemit_i2c_read_reg(i2c, ICR);
@@ -560,8 +558,6 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 {
-	dev_err(i2c->dev, "handle read: %d\n", i2c->unprocessed);
-	
 	if (i2c->unprocessed)
 		spacemit_i2c_prepare_read(i2c);
 
@@ -704,8 +700,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 
 	timeout = cnt * 9 * USEC_PER_SEC / freq;
 
-	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) \
-			     / i2c->msg_num;
+	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2);
 }
 
 static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
