@@ -337,12 +337,13 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->dir == DIR_READ)
+	if (i2c->dir == DIR_READ) {
 		if (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1)
 			return 1;
-	else if (i2c->dir == DIR_WRITE)
+	} else if (i2c->dir == DIR_WRITE) {
 		if (!i2c->unprocessed && i2c->msg_idx == i2c->msg_num - 1)
 			return 1;
+	}
 
 	return 0;
 }
