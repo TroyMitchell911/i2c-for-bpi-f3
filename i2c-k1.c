@@ -592,7 +592,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	i2c->dev = &pdev->dev;
 
 	i2c->base = devm_platform_ioremap_resource(pdev, 0);
-	if (!i2c->base)
+	if (IS_ERR(i2c->base))
 		return dev_err_probe(&pdev->dev, PTR_ERR(i2c->base), "failed to do ioremap");
 
 	i2c->irq = platform_get_irq(pdev, 0);
