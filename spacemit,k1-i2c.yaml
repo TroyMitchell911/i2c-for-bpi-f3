@@ -24,10 +24,11 @@ properties:
 
   clock-frequency:
     description:
-      Desired I2C bus clock frequency in Hz. As only fast and high-speed
-      modes are supported by hardware, possible values are 100000 and 400000.
-    enum: [100000, 400000]
+      Desired I2C bus clock frequency in Hz.
+      Supports standard and fast modes, from 1 to 400000.
     default: 100000
+    minimum: 1
+    maximum: 400000
 
 required:
   - compatible
