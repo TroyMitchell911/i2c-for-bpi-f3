@@ -25,10 +25,10 @@ properties:
   clock-frequency:
     description:
       Desired I2C bus clock frequency in Hz.
-      Supports standard and fast modes, from 1 to 400000.
+      K1 supports standard, fast, high-speed modes, from 1 to 3300000.
     default: 100000
     minimum: 1
-    maximum: 400000
+    maximum: 3300000
 
 required:
   - compatible
