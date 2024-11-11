@@ -305,9 +305,6 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 {
 	unsigned long time_left;
 
-	if (unlikely(i2c->err))
-		return -1;
-
 	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
 		i2c->cur_msg = i2c->msgs + i2c->msg_idx;
 		i2c->msg_buf = i2c->cur_msg->buf;
