@@ -510,9 +510,9 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) / i2c->msg_num;
 }
 
-static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
+static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 {
-	int ret = 0;
+	int ret;
 
 	spacemit_i2c_reset(i2c);
 
@@ -542,8 +542,7 @@ static inline int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	return ret;
 }
 
-static int
-spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
+static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
 {
 	struct spacemit_i2c_dev *i2c = i2c_get_adapdata(adapt);
 	int ret;
