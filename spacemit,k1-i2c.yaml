@@ -14,7 +14,7 @@ properties:
     const: spacemit,k1-i2c
 
   reg:
-    maxItems: 2
+    maxItems: 1
 
   interrupts:
     maxItems: 1
@@ -43,7 +43,7 @@ examples:
   - |
     i2c@d4010800 {
         compatible = "spacemit,k1-i2c";
-        reg = <0x0 0xd4010800 0x0 0x38>;
+        reg = <0xd4010800 0x38>;
         interrupt-parent = <&plic>;
         interrupts = <36>;
         clocks = <&ccu 90>;
