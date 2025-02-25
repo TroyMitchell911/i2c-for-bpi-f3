@@ -145,17 +145,14 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 {
 	u32 err = SPACEMIT_I2C_GET_ERR(i2c->status);
-	if (!err)
-		return 0;
-
-	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n",	i2c->status);
+	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n", i2c->status);
 
 	if (err & (SPACEMIT_SR_BED | SPACEMIT_SR_ALD)) {
 		spacemit_i2c_reset(i2c);
 		return -EAGAIN;
 	}
 
-	return (i2c->status & SPACEMIT_SR_ACKNAK) ? -ENXIO : -EIO;
+	return i2c->status & SPACEMIT_SR_ACKNAK ? -ENXIO : -EIO;
 }
 
 static void spacemit_i2c_conditionally_reset_bus(struct spacemit_i2c_dev *i2c)
