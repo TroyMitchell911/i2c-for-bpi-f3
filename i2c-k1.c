@@ -13,43 +13,23 @@
 /* spacemit i2c registers */
 #define SPACEMIT_ICR		 0x0		/* Control Register */
 #define SPACEMIT_ISR		 0x4		/* Status Register */
-#define SPACEMIT_ISAR         	 0x8		/* Slave Address Register */
 #define SPACEMIT_IDBR         	 0xc		/* Data Buffer Register */
-#define SPACEMIT_ILCR         	 0x10		/* Load Count Register */
-#define SPACEMIT_IWCR         	 0x14		/* Wait Count Register */
-#define SPACEMIT_IRST_CYC     	 0x18		/* Bus reset cycle counter */
 #define SPACEMIT_IBMR         	 0x1c		/* Bus monitor register */
-#define SPACEMIT_IWFIFO       	 0x20		/* Write FIFO Register */
-#define SPACEMIT_IWFIFO_WPTR  	 0x24		/* Write FIFO Write Pointer Register */
-#define SPACEMIT_IWFIFO_RPTR  	 0x28		/* Write FIFO Read Pointer Register */
-#define SPACEMIT_IRFIFO       	 0x2c		/* Read FIFO Register */
-#define SPACEMIT_IRFIFO_WPTR  	 0x30		/* Read FIFO Write Pointer Register */
-#define SPACEMIT_IRFIFO_RPTR	 0x34		/* Read FIFO Read Pointer Register */
 
 /* register SPACEMIT_ICR fields */
 #define SPACEMIT_CR_START        BIT(0)		/* start bit */
 #define SPACEMIT_CR_STOP         BIT(1)		/* stop bit */
 #define SPACEMIT_CR_ACKNAK       BIT(2)		/* send ACK(0) or NAK(1) */
 #define SPACEMIT_CR_TB           BIT(3)		/* transfer byte bit */
-#define SPACEMIT_CR_TXBEGIN      BIT(4)		/* transaction begin */
-#define SPACEMIT_CR_FIFOEN       BIT(5)		/* enable FIFO mode */
-#define SPACEMIT_CR_GPIOEN       BIT(6)		/* enable GPIO mode for SCL in HS */
-#define SPACEMIT_CR_DMAEN        BIT(7)		/* enable DMA for TX and RX FIFOs */
 #define SPACEMIT_CR_MODE_FAST    BIT(8)		/* bus mode (master operation) */
-#define SPACEMIT_CR_MODE_HIGH    BIT(9)		/* bus mode (master operation) */
 #define SPACEMIT_CR_UR           BIT(10)	/* unit reset */
-#define SPACEMIT_CR_RSTREQ       BIT(11)	/* i2c bus reset request */
-#define SPACEMIT_CR_MA           BIT(12)	/* master abort */
 #define SPACEMIT_CR_SCLE         BIT(13)	/* master clock enable */
 #define SPACEMIT_CR_IUE          BIT(14)	/* unit enable */
-#define SPACEMIT_CR_HS_STRETCH   BIT(16)	/* I2C hs stretch */
 #define SPACEMIT_CR_ALDIE        BIT(18)	/* enable arbitration interrupt */
 #define SPACEMIT_CR_DTEIE        BIT(19)	/* enable tx interrupts */
 #define SPACEMIT_CR_DRFIE        BIT(20)	/* enable rx interrupts */
 #define SPACEMIT_CR_GCD          BIT(21)	/* general call disable */
 #define SPACEMIT_CR_BEIE         BIT(22)	/* enable bus error ints */
-#define SPACEMIT_CR_SADIE        BIT(23)	/* slave address detected int enable */
-#define SPACEMIT_CR_SSDIE        BIT(24)	/* slave STOP detected int enable */
 #define SPACEMIT_CR_MSDIE        BIT(25)	/* master STOP detected int enable */
 #define SPACEMIT_CR_MSDE         BIT(26)	/* master STOP detected enable */
 #define SPACEMIT_CR_TXDONEIE     BIT(27)	/* transaction done int enable */
@@ -59,47 +39,18 @@
 #define SPACEMIT_CR_RXOVIE       BIT(31)	/* receive FIFO overrun int enable */
 
 /* register SPACEMIT_ISR fields */
-#define SPACEMIT_SR_RWM          BIT(13)	/* read/write mode */
 #define SPACEMIT_SR_ACKNAK       BIT(14)	/* ACK/NACK status */
 #define SPACEMIT_SR_UB           BIT(15)	/* unit busy */
 #define SPACEMIT_SR_IBB          BIT(16)	/* i2c bus busy */
 #define SPACEMIT_SR_EBB          BIT(17)	/* early bus busy */
 #define SPACEMIT_SR_ALD          BIT(18)	/* arbitration loss detected */
-#define SPACEMIT_SR_ITE          BIT(19)	/* tx buffer empty */
-#define SPACEMIT_SR_IRF          BIT(20)	/* rx buffer full */
-#define SPACEMIT_SR_GCAD         BIT(21)	/* general call address detected */
 #define SPACEMIT_SR_BED          BIT(22)	/* bus error no ACK/NAK */
-#define SPACEMIT_SR_SAD          BIT(23)	/* slave address detected */
-#define SPACEMIT_SR_SSD          BIT(24)	/* slave stop detected */
 #define SPACEMIT_SR_MSD          BIT(26)	/* master stop detected */
-#define SPACEMIT_SR_TXDONE       BIT(27)	/* transaction done */
-#define SPACEMIT_SR_TXE          BIT(28)	/* tx FIFO empty */
-#define SPACEMIT_SR_RXHF         BIT(29)	/* rx FIFO half-full */
-#define SPACEMIT_SR_RXF          BIT(30)	/* rx FIFO full */
 #define SPACEMIT_SR_RXOV         BIT(31)	/* RX FIFO overrun */
-
-/* register SPACEMIT_ILCR fields */
-#define SPACEMIT_LCR_SLV         0x000001FF	/* SLV: bit[8:0] */
-#define SPACEMIT_LCR_FLV         0x0003FE00	/* FLV: bit[17:9] */
-#define SPACEMIT_LCR_HLVH        0x07FC0000	/* HLVH: bit[26:18] */
-#define SPACEMIT_LCR_HLVL        0xF8000000	/* HLVL: bit[31:27] */
-
-/* register SPACEMIT_IWCR fields */
-#define SPACEMIT_WCR_COUNT       0x0000001F	/* COUNT: bit[4:0] */
-#define SPACEMIT_WCR_COUNT1      0x000003E0	/* HS_COUNT1: bit[9:5] */
-#define SPACEMIT_WCR_COUNT2      0x00007C00	/* HS_COUNT2: bit[14:10] */
 
 /* register SPACEMIT_IBMR fields */
 #define SPACEMIT_BMR_SDA         BIT(0)		/* SDA line level */
 #define SPACEMIT_BMR_SCL         BIT(1)		/* SCL line level */
-
-/* register SPACEMIT_IWFIFO fields */
-#define SPACEMIT_WFIFO_DATA_MSK		0x000000FF  /* data: bit[7:0] */
-#define SPACEMIT_WFIFO_CTRL_MSK		0x000003E0  /* control: bit[11:8] */
-#define SPACEMIT_WFIFO_CTRL_START	BIT(8)      /* start bit */
-#define SPACEMIT_WFIFO_CTRL_STOP	BIT(9)      /* stop bit */
-#define SPACEMIT_WFIFO_CTRL_ACKNAK	BIT(10)     /* send ACK(0) or NAK(1) */
-#define SPACEMIT_WFIFO_CTRL_TB		BIT(11)     /* transfer byte bit */
 
 /* status register init value */
 #define SPACEMIT_I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
@@ -563,7 +514,7 @@ static u32 spacemit_i2c_func(struct i2c_adapter *adap)
 }
 
 static const struct i2c_algorithm spacemit_i2c_algo = {
-	.xfer = spacemit_i2c_xfer,
+	.master_xfer = spacemit_i2c_xfer,
 	.functionality = spacemit_i2c_func,
 };
 
@@ -621,11 +572,13 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void spacemit_i2c_remove(struct platform_device *pdev)
+static int spacemit_i2c_remove(struct platform_device *pdev)
 {
 	struct spacemit_i2c_dev *i2c = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&i2c->adapt);
+
+	return 0;
 }
 
 static const struct of_device_id spacemit_i2c_of_match[] = {
