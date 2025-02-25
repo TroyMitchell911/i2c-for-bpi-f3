@@ -259,8 +259,8 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 
 	writel(slave_addr_rw, i2c->base + SPACEMIT_IDBR);
 
-	val = readl(i2c->base + SPACEMIT_ICR);
 	/* send start pulse */
+	val = readl(i2c->base + SPACEMIT_ICR);
 	val &= ~SPACEMIT_CR_STOP;
 	val |= SPACEMIT_CR_START | SPACEMIT_CR_TB | SPACEMIT_CR_DTEIE;
 	writel(val, i2c->base + SPACEMIT_ICR);
