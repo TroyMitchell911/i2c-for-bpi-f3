@@ -83,6 +83,8 @@
 
 #define SPACEMIT_I2C_FAST_MODE_FREQ	400000
 
+#define SPACEMIT_I2C_GET_ERR(status)	(status & (SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD))
+
 enum spacemit_i2c_state {
 	STATE_IDLE,
 	STATE_START,
@@ -113,7 +115,6 @@ struct spacemit_i2c_dev {
 	bool read;
 	struct completion complete;
 	u32 status;
-	u32 err;
 };
 
 static void spacemit_i2c_enable(struct spacemit_i2c_dev *i2c)
@@ -269,11 +270,11 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 {
 	unsigned long time_left;
+	u32 err;
 
 	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
 		i2c->cur_msg = i2c->msgs + i2c->msg_idx;
 		i2c->msg_buf = i2c->cur_msg->buf;
-		i2c->err = 0;
 		i2c->status = 0;
 		i2c->unprocessed = i2c->cur_msg->len;
 
@@ -290,7 +291,8 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 			return -ETIMEDOUT;
 		}
 
-		if (i2c->err)
+		err = SPACEMIT_I2C_GET_ERR(i2c->status);
+		if (err)
 			return spacemit_i2c_handle_err(i2c);
 	}
 
@@ -356,12 +358,13 @@ static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 {
-	if (!i2c->err)
+	u32 err = SPACEMIT_I2C_GET_ERR(i2c->status);
+	if (!err)
 		return 0;
 
 	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n",	i2c->status);
 
-	if (i2c->err & (SPACEMIT_SR_BED | SPACEMIT_SR_ALD)) {
+	if (err & (SPACEMIT_SR_BED | SPACEMIT_SR_ALD)) {
 		spacemit_i2c_reset(i2c);
 		return -EAGAIN;
 	}
@@ -376,7 +379,7 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (i2c->err || (i2c->status & SPACEMIT_SR_MSD)) {
+	if (SPACEMIT_I2C_GET_ERR(i2c->status) || (i2c->status & SPACEMIT_SR_MSD)) {
 		/*
 		 * Here the transaction is already done, we don't need any
 		 * other interrupt signals from now, in case any interrupt
@@ -406,11 +409,9 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	i2c->status = status;
 
-	i2c->err = status & (SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD);
-
 	spacemit_i2c_clear_int_status(i2c, status);
 
-	if (i2c->err)
+	if (SPACEMIT_I2C_GET_ERR(i2c->status))
 		goto err_out;
 
 	val = readl(i2c->base + SPACEMIT_ICR);
@@ -497,6 +498,7 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], i
 {
 	struct spacemit_i2c_dev *i2c = i2c_get_adapdata(adapt);
 	int ret;
+	u32 err = SPACEMIT_I2C_GET_ERR(i2c->status);
 
 	i2c->msgs = msgs;
 	i2c->msg_num = num;
@@ -510,7 +512,7 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], i
 	spacemit_i2c_disable(i2c);
 
 	if (ret == -ETIMEDOUT || ret == -EAGAIN)
-		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%x\n", ret, i2c->err);
+		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%x\n", ret, err);
 
 	return ret < 0 ? ret : num;
 }
