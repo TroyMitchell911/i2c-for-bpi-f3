@@ -90,11 +90,6 @@ enum spacemit_i2c_state {
 	STATE_WRITE,
 };
 
-enum spacemit_i2c_dir {
-	DIR_WRITE,
-	DIR_READ
-};
-
 /* i2c-spacemit driver's main struct */
 struct spacemit_i2c_dev {
 	struct device *dev;
@@ -115,7 +110,7 @@ struct spacemit_i2c_dev {
 	size_t unprocessed;
 
 	enum spacemit_i2c_state state;
-	enum spacemit_i2c_dir dir;
+	bool read;
 	struct completion complete;
 	u32 status;
 	u32 err;
@@ -239,7 +234,7 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
 	u32 slave_addr_rw, val;
 
-	i2c->dir = i2c->cur_msg->flags & I2C_M_RD;
+	i2c->read = i2c->cur_msg->flags & I2C_M_RD;
 	i2c->state = STATE_START;
 
 	if (i2c->cur_msg->flags & I2C_M_RD)
@@ -265,7 +260,7 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 
 	val |= SPACEMIT_CR_STOP | SPACEMIT_CR_ALDIE | SPACEMIT_CR_TB;
 
-	if (i2c->dir == DIR_READ)
+	if (i2c->read)
 		val |= SPACEMIT_CR_ACKNAK;
 
 	writel(val, i2c->base + SPACEMIT_ICR);
@@ -304,10 +299,10 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->dir == DIR_READ) {
+	if (i2c->read) {
 		if (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1)
 			return 1;
-	} else if (i2c->dir == DIR_WRITE) {
+	} else {
 		if (!i2c->unprocessed && i2c->msg_idx == i2c->msg_num - 1)
 			return 1;
 	}
@@ -354,15 +349,9 @@ static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->dir == DIR_READ) {
-		i2c->state = STATE_READ;
-		return;
-	}
-
-	if (i2c->dir == DIR_WRITE) {
-		i2c->state = STATE_WRITE;
+	i2c->state = i2c->read ? STATE_READ : STATE_WRITE;
+	if (!i2c->read)
 		spacemit_i2c_handle_write(i2c);
-	}
 }
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
