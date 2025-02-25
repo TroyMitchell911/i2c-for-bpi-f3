@@ -311,17 +311,15 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 	return 0;
 }
 
-static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
+static bool spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->read) {
-		if (i2c->unprocessed == 1 && i2c->msg_idx == i2c->msg_num - 1)
-			return 1;
-	} else {
-		if (!i2c->unprocessed && i2c->msg_idx == i2c->msg_num - 1)
-			return 1;
-	}
+	if (i2c->msg_idx != i2c->msg_num - 1)
+		return false;
 
-	return 0;
+	if (i2c->read)
+		return i2c->unprocessed == 1;
+
+	return !i2c->unprocessed;
 }
 
 static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
