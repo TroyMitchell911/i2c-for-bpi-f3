@@ -442,19 +442,18 @@ err_out:
 static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 {
 	unsigned long timeout;
-	int idx = 0, cnt = 0, freq;
+	int idx = 0, cnt = 0;
 
 	while (idx < i2c->msg_num) {
 		cnt += (i2c->msgs + idx)->len + 1;
 		idx++;
 	}
 
-	freq = SPACEMIT_I2C_FAST_MODE_FREQ;
 	/*
 	 * multiply by 9 because each byte in I2C transmission requires
 	 * 9 clock cycles: 8 bits of data plus 1 ACK/NACK bit.
 	 */
-	timeout = cnt * 9 * USEC_PER_SEC / freq;
+	timeout = cnt * 9 * USEC_PER_SEC /  SPACEMIT_I2C_FAST_MODE_FREQ;
 
 	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) / i2c->msg_num;
 }
