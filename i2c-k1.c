@@ -362,7 +362,7 @@ static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 {
 	i2c->state = i2c->read ? STATE_READ : STATE_WRITE;
-	if (!i2c->read)
+	if (i2c->state == STATE_WRITE)
 		spacemit_i2c_handle_write(i2c);
 }
 
