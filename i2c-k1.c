@@ -204,7 +204,7 @@ static void spacemit_i2c_check_bus_release(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 {
-	u32 val = 0;
+	u32 val;
 
 	/*
 	 * Unmask interrupt bits for all xfer mode:
@@ -212,7 +212,7 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 	 * For transaction complete signal, we use master stop
 	 * interrupt, so we don't need to unmask SPACEMIT_CR_TXDONEIE.
 	 */
-	val |= SPACEMIT_CR_BEIE | SPACEMIT_CR_ALDIE;
+	val = SPACEMIT_CR_BEIE | SPACEMIT_CR_ALDIE;
 
 	/*
 	 * Unmask interrupt bits for interrupt xfer mode:
@@ -249,6 +249,7 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	u32 slave_addr_rw, val;
 
 	i2c->read = i2c->cur_msg->flags & I2C_M_RD;
+
 	i2c->state = STATE_START;
 
 	if (i2c->cur_msg->flags & I2C_M_RD)
