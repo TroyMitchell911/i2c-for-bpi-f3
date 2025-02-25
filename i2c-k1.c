@@ -122,7 +122,8 @@ static void spacemit_i2c_enable(struct spacemit_i2c_dev *i2c)
 	u32 val;
 
 	val = readl(i2c->base + SPACEMIT_ICR);
-	writel(val | SPACEMIT_CR_IUE, i2c->base + SPACEMIT_ICR);
+	val |= SPACEMIT_CR_IUE;
+	writel(val, i2c->base + SPACEMIT_ICR);
 }
 
 static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
@@ -246,7 +247,6 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	writel(slave_addr_rw, i2c->base + SPACEMIT_IDBR);
 
 	val = readl(i2c->base + SPACEMIT_ICR);
-
 	/* send start pulse */
 	val &= ~SPACEMIT_CR_STOP;
 	val |= SPACEMIT_CR_START | SPACEMIT_CR_TB | SPACEMIT_CR_DTEIE;
@@ -258,7 +258,6 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 	u32 val;
 
 	val = readl(i2c->base + SPACEMIT_ICR);
-
 	val |= SPACEMIT_CR_STOP | SPACEMIT_CR_ALDIE | SPACEMIT_CR_TB;
 
 	if (i2c->read)
@@ -415,7 +414,6 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 		goto err_out;
 
 	val = readl(i2c->base + SPACEMIT_ICR);
-
 	val &= ~(SPACEMIT_CR_TB | SPACEMIT_CR_ACKNAK | SPACEMIT_CR_STOP | SPACEMIT_CR_START);
 	writel(val, i2c->base + SPACEMIT_ICR);
 
