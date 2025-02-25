@@ -11,107 +11,107 @@
  #include <linux/platform_device.h>
 
 /* spacemit i2c registers */
-#define ICR          0x0		/* Control Register */
-#define ISR          0x4		/* Status Register */
-#define ISAR         0x8		/* Slave Address Register */
-#define IDBR         0xc		/* Data Buffer Register */
-#define ILCR         0x10		/* Load Count Register */
-#define IWCR         0x14		/* Wait Count Register */
-#define IRST_CYC     0x18		/* Bus reset cycle counter */
-#define IBMR         0x1c		/* Bus monitor register */
-#define IWFIFO       0x20		/* Write FIFO Register */
-#define IWFIFO_WPTR  0x24		/* Write FIFO Write Pointer Register */
-#define IWFIFO_RPTR  0x28		/* Write FIFO Read Pointer Register */
-#define IRFIFO       0x2c		/* Read FIFO Register */
-#define IRFIFO_WPTR  0x30		/* Read FIFO Write Pointer Register */
-#define IRFIFO_RPTR  0x34		/* Read FIFO Read Pointer Register */
+#define SPACEMIT_ICR		 0x0		/* Control Register */
+#define SPACEMIT_ISR		 0x4		/* Status Register */
+#define SPACEMIT_ISAR         	 0x8		/* Slave Address Register */
+#define SPACEMIT_IDBR         	 0xc		/* Data Buffer Register */
+#define SPACEMIT_ILCR         	 0x10		/* Load Count Register */
+#define SPACEMIT_IWCR         	 0x14		/* Wait Count Register */
+#define SPACEMIT_IRST_CYC     	 0x18		/* Bus reset cycle counter */
+#define SPACEMIT_IBMR         	 0x1c		/* Bus monitor register */
+#define SPACEMIT_IWFIFO       	 0x20		/* Write FIFO Register */
+#define SPACEMIT_IWFIFO_WPTR  	 0x24		/* Write FIFO Write Pointer Register */
+#define SPACEMIT_IWFIFO_RPTR  	 0x28		/* Write FIFO Read Pointer Register */
+#define SPACEMIT_IRFIFO       	 0x2c		/* Read FIFO Register */
+#define SPACEMIT_IRFIFO_WPTR  	 0x30		/* Read FIFO Write Pointer Register */
+#define SPACEMIT_IRFIFO_RPTR	 0x34		/* Read FIFO Read Pointer Register */
 
-/* register ICR fields */
-#define CR_START        BIT(0)		/* start bit */
-#define CR_STOP         BIT(1)		/* stop bit */
-#define CR_ACKNAK       BIT(2)		/* send ACK(0) or NAK(1) */
-#define CR_TB           BIT(3)		/* transfer byte bit */
-#define CR_TXBEGIN      BIT(4)		/* transaction begin */
-#define CR_FIFOEN       BIT(5)		/* enable FIFO mode */
-#define CR_GPIOEN       BIT(6)		/* enable GPIO mode for SCL in HS */
-#define CR_DMAEN        BIT(7)		/* enable DMA for TX and RX FIFOs */
-#define CR_MODE_FAST    BIT(8)		/* bus mode (master operation) */
-#define CR_MODE_HIGH    BIT(9)		/* bus mode (master operation) */
-#define CR_UR           BIT(10)		/* unit reset */
-#define CR_RSTREQ       BIT(11)		/* i2c bus reset request */
-#define CR_MA           BIT(12)		/* master abort */
-#define CR_SCLE         BIT(13)		/* master clock enable */
-#define CR_IUE          BIT(14)		/* unit enable */
-#define CR_HS_STRETCH   BIT(16)		/* I2C hs stretch */
-#define CR_ALDIE        BIT(18)		/* enable arbitration interrupt */
-#define CR_DTEIE        BIT(19)		/* enable tx interrupts */
-#define CR_DRFIE        BIT(20)		/* enable rx interrupts */
-#define CR_GCD          BIT(21)		/* general call disable */
-#define CR_BEIE         BIT(22)		/* enable bus error ints */
-#define CR_SADIE        BIT(23)		/* slave address detected int enable */
-#define CR_SSDIE        BIT(24)		/* slave STOP detected int enable */
-#define CR_MSDIE        BIT(25)		/* master STOP detected int enable */
-#define CR_MSDE         BIT(26)		/* master STOP detected enable */
-#define CR_TXDONEIE     BIT(27)		/* transaction done int enable */
-#define CR_TXEIE        BIT(28)		/* transmit FIFO empty int enable */
-#define CR_RXHFIE       BIT(29)		/* receive FIFO half-full int enable */
-#define CR_RXFIE        BIT(30)		/* receive FIFO full int enable */
-#define CR_RXOVIE       BIT(31)		/* receive FIFO overrun int enable */
+/* register SPACEMIT_ICR fields */
+#define SPACEMIT_CR_START        BIT(0)		/* start bit */
+#define SPACEMIT_CR_STOP         BIT(1)		/* stop bit */
+#define SPACEMIT_CR_ACKNAK       BIT(2)		/* send ACK(0) or NAK(1) */
+#define SPACEMIT_CR_TB           BIT(3)		/* transfer byte bit */
+#define SPACEMIT_CR_TXBEGIN      BIT(4)		/* transaction begin */
+#define SPACEMIT_CR_FIFOEN       BIT(5)		/* enable FIFO mode */
+#define SPACEMIT_CR_GPIOEN       BIT(6)		/* enable GPIO mode for SCL in HS */
+#define SPACEMIT_CR_DMAEN        BIT(7)		/* enable DMA for TX and RX FIFOs */
+#define SPACEMIT_CR_MODE_FAST    BIT(8)		/* bus mode (master operation) */
+#define SPACEMIT_CR_MODE_HIGH    BIT(9)		/* bus mode (master operation) */
+#define SPACEMIT_CR_UR           BIT(10)	/* unit reset */
+#define SPACEMIT_CR_RSTREQ       BIT(11)	/* i2c bus reset request */
+#define SPACEMIT_CR_MA           BIT(12)	/* master abort */
+#define SPACEMIT_CR_SCLE         BIT(13)	/* master clock enable */
+#define SPACEMIT_CR_IUE          BIT(14)	/* unit enable */
+#define SPACEMIT_CR_HS_STRETCH   BIT(16)	/* I2C hs stretch */
+#define SPACEMIT_CR_ALDIE        BIT(18)	/* enable arbitration interrupt */
+#define SPACEMIT_CR_DTEIE        BIT(19)	/* enable tx interrupts */
+#define SPACEMIT_CR_DRFIE        BIT(20)	/* enable rx interrupts */
+#define SPACEMIT_CR_GCD          BIT(21)	/* general call disable */
+#define SPACEMIT_CR_BEIE         BIT(22)	/* enable bus error ints */
+#define SPACEMIT_CR_SADIE        BIT(23)	/* slave address detected int enable */
+#define SPACEMIT_CR_SSDIE        BIT(24)	/* slave STOP detected int enable */
+#define SPACEMIT_CR_MSDIE        BIT(25)	/* master STOP detected int enable */
+#define SPACEMIT_CR_MSDE         BIT(26)	/* master STOP detected enable */
+#define SPACEMIT_CR_TXDONEIE     BIT(27)	/* transaction done int enable */
+#define SPACEMIT_CR_TXEIE        BIT(28)	/* transmit FIFO empty int enable */
+#define SPACEMIT_CR_RXHFIE       BIT(29)	/* receive FIFO half-full int enable */
+#define SPACEMIT_CR_RXFIE        BIT(30)	/* receive FIFO full int enable */
+#define SPACEMIT_CR_RXOVIE       BIT(31)	/* receive FIFO overrun int enable */
 
-/* register ISR fields */
-#define SR_RWM          BIT(13)		/* read/write mode */
-#define SR_ACKNAK       BIT(14)		/* ACK/NACK status */
-#define SR_UB           BIT(15)		/* unit busy */
-#define SR_IBB          BIT(16)		/* i2c bus busy */
-#define SR_EBB          BIT(17)		/* early bus busy */
-#define SR_ALD          BIT(18)		/* arbitration loss detected */
-#define SR_ITE          BIT(19)		/* tx buffer empty */
-#define SR_IRF          BIT(20)		/* rx buffer full */
-#define SR_GCAD         BIT(21)		/* general call address detected */
-#define SR_BED          BIT(22)		/* bus error no ACK/NAK */
-#define SR_SAD          BIT(23)		/* slave address detected */
-#define SR_SSD          BIT(24)		/* slave stop detected */
-#define SR_MSD          BIT(26)		/* master stop detected */
-#define SR_TXDONE       BIT(27)		/* transaction done */
-#define SR_TXE          BIT(28)		/* tx FIFO empty */
-#define SR_RXHF         BIT(29)		/* rx FIFO half-full */
-#define SR_RXF          BIT(30)		/* rx FIFO full */
-#define SR_RXOV         BIT(31)		/* RX FIFO overrun */
+/* register SPACEMIT_ISR fields */
+#define SPACEMIT_SR_RWM          BIT(13)	/* read/write mode */
+#define SPACEMIT_SR_ACKNAK       BIT(14)	/* ACK/NACK status */
+#define SPACEMIT_SR_UB           BIT(15)	/* unit busy */
+#define SPACEMIT_SR_IBB          BIT(16)	/* i2c bus busy */
+#define SPACEMIT_SR_EBB          BIT(17)	/* early bus busy */
+#define SPACEMIT_SR_ALD          BIT(18)	/* arbitration loss detected */
+#define SPACEMIT_SR_ITE          BIT(19)	/* tx buffer empty */
+#define SPACEMIT_SR_IRF          BIT(20)	/* rx buffer full */
+#define SPACEMIT_SR_GCAD         BIT(21)	/* general call address detected */
+#define SPACEMIT_SR_BED          BIT(22)	/* bus error no ACK/NAK */
+#define SPACEMIT_SR_SAD          BIT(23)	/* slave address detected */
+#define SPACEMIT_SR_SSD          BIT(24)	/* slave stop detected */
+#define SPACEMIT_SR_MSD          BIT(26)	/* master stop detected */
+#define SPACEMIT_SR_TXDONE       BIT(27)	/* transaction done */
+#define SPACEMIT_SR_TXE          BIT(28)	/* tx FIFO empty */
+#define SPACEMIT_SR_RXHF         BIT(29)	/* rx FIFO half-full */
+#define SPACEMIT_SR_RXF          BIT(30)	/* rx FIFO full */
+#define SPACEMIT_SR_RXOV         BIT(31)	/* RX FIFO overrun */
 
-/* register ILCR fields */
-#define LCR_SLV         0x000001FF	/* SLV: bit[8:0] */
-#define LCR_FLV         0x0003FE00	/* FLV: bit[17:9] */
-#define LCR_HLVH        0x07FC0000	/* HLVH: bit[26:18] */
-#define LCR_HLVL        0xF8000000	/* HLVL: bit[31:27] */
+/* register SPACEMIT_ILCR fields */
+#define SPACEMIT_LCR_SLV         0x000001FF	/* SLV: bit[8:0] */
+#define SPACEMIT_LCR_FLV         0x0003FE00	/* FLV: bit[17:9] */
+#define SPACEMIT_LCR_HLVH        0x07FC0000	/* HLVH: bit[26:18] */
+#define SPACEMIT_LCR_HLVL        0xF8000000	/* HLVL: bit[31:27] */
 
-/* register IWCR fields */
-#define WCR_COUNT       0x0000001F	/* COUNT: bit[4:0] */
-#define WCR_COUNT1      0x000003E0	/* HS_COUNT1: bit[9:5] */
-#define WCR_COUNT2      0x00007C00	/* HS_COUNT2: bit[14:10] */
+/* register SPACEMIT_IWCR fields */
+#define SPACEMIT_WCR_COUNT       0x0000001F	/* COUNT: bit[4:0] */
+#define SPACEMIT_WCR_COUNT1      0x000003E0	/* HS_COUNT1: bit[9:5] */
+#define SPACEMIT_WCR_COUNT2      0x00007C00	/* HS_COUNT2: bit[14:10] */
 
-/* register IBMR fields */
-#define BMR_SDA         BIT(0)		/* SDA line level */
-#define BMR_SCL         BIT(1)		/* SCL line level */
+/* register SPACEMIT_IBMR fields */
+#define SPACEMIT_BMR_SDA         BIT(0)		/* SDA line level */
+#define SPACEMIT_BMR_SCL         BIT(1)		/* SCL line level */
 
-/* register IWFIFO fields */
-#define WFIFO_DATA_MSK      0x000000FF  /* data: bit[7:0] */
-#define WFIFO_CTRL_MSK      0x000003E0  /* control: bit[11:8] */
-#define WFIFO_CTRL_START    BIT(8)      /* start bit */
-#define WFIFO_CTRL_STOP     BIT(9)      /* stop bit */
-#define WFIFO_CTRL_ACKNAK   BIT(10)     /* send ACK(0) or NAK(1) */
-#define WFIFO_CTRL_TB       BIT(11)     /* transfer byte bit */
+/* register SPACEMIT_IWFIFO fields */
+#define SPACEMIT_WFIFO_DATA_MSK		0x000000FF  /* data: bit[7:0] */
+#define SPACEMIT_WFIFO_CTRL_MSK		0x000003E0  /* control: bit[11:8] */
+#define SPACEMIT_WFIFO_CTRL_START	BIT(8)      /* start bit */
+#define SPACEMIT_WFIFO_CTRL_STOP	BIT(9)      /* stop bit */
+#define SPACEMIT_WFIFO_CTRL_ACKNAK	BIT(10)     /* send ACK(0) or NAK(1) */
+#define SPACEMIT_WFIFO_CTRL_TB		BIT(11)     /* transfer byte bit */
 
 /* status register init value */
-#define I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
-#define I2C_INT_CTRL_MASK      (CR_ALDIE | CR_DTEIE | CR_DRFIE | \
-				CR_BEIE | CR_TXDONEIE | CR_TXEIE | \
-				CR_RXHFIE | CR_RXFIE | CR_RXOVIE | \
-				CR_MSDIE)
+#define SPACEMIT_I2C_INT_STATUS_MASK    0xfffc0000  /* SR bits[31:18] */
+#define SPACEMIT_I2C_INT_CTRL_MASK      (SPACEMIT_CR_ALDIE | SPACEMIT_CR_DTEIE | SPACEMIT_CR_DRFIE | \
+					SPACEMIT_CR_BEIE | SPACEMIT_CR_TXDONEIE | SPACEMIT_CR_TXEIE | \
+					SPACEMIT_CR_RXHFIE | SPACEMIT_CR_RXFIE | SPACEMIT_CR_RXOVIE | \
+					SPACEMIT_CR_MSDIE)
 
 /* i2c bus recover timeout: us */
-#define I2C_BUS_RECOVER_TIMEOUT		(100000)
+#define SPACEMIT_I2C_BUS_RECOVER_TIMEOUT (100000)
 
-#define I2C_FAST_MODE_FREQ		(400000)
+#define SPACEMIT_I2C_FAST_MODE_FREQ	 (400000)
 
 enum spacemit_i2c_state {
 	STATE_IDLE,
@@ -155,24 +155,24 @@ static void spacemit_i2c_enable(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
 
-	val = readl(i2c->base + ICR);
-	writel(val | CR_IUE, i2c->base + ICR);
+	val = readl(i2c->base + SPACEMIT_ICR);
+	writel(val | SPACEMIT_CR_IUE, i2c->base + SPACEMIT_ICR);
 }
 
 static void spacemit_i2c_disable(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
 
-	val = readl(i2c->base + ICR);
-	val &= ~CR_IUE;
-	writel(val, i2c->base + ICR);
+	val = readl(i2c->base + SPACEMIT_ICR);
+	val &= ~SPACEMIT_CR_IUE;
+	writel(val, i2c->base + SPACEMIT_ICR);
 }
 
 static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 {
-	writel(CR_UR, i2c->base + ICR);
+	writel(SPACEMIT_CR_UR, i2c->base + SPACEMIT_ICR);
 	udelay(5);
-	writel(0, i2c->base + ICR);
+	writel(0, i2c->base + SPACEMIT_ICR);
 }
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c);
@@ -182,16 +182,16 @@ static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
 	u32 status;
 
 	/* if bus is locked, reset unit. 0: locked */
-	status = readl(i2c->base + IBMR);
-	if ((status & BMR_SDA) && (status & BMR_SCL))
+	status = readl(i2c->base + SPACEMIT_IBMR);
+	if ((status & SPACEMIT_BMR_SDA) && (status & SPACEMIT_BMR_SCL))
 		return;
 
 	spacemit_i2c_reset(i2c);
 	usleep_range(10, 20);
 
 	/* check scl status again */
-	status = readl(i2c->base + IBMR);
-	if (!(status & BMR_SCL))
+	status = readl(i2c->base + SPACEMIT_IBMR);
+	if (!(status & SPACEMIT_BMR_SCL))
 		dev_warn_ratelimited(i2c->dev, "unit reset failed\n");
 }
 
@@ -200,12 +200,12 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 	int ret = 0;
 	u32 val;
 
-	val = readl(i2c->base + ISR);
-	if (!(val & (SR_UB | SR_IBB)))
+	val = readl(i2c->base + SPACEMIT_ISR);
+	if (!(val & (SPACEMIT_SR_UB | SPACEMIT_SR_IBB)))
 		return 0;
 
-	ret = readl_poll_timeout(i2c->base + ISR, val, !(val & (SR_UB | SR_IBB)),
-				 1500, I2C_BUS_RECOVER_TIMEOUT);
+	ret = readl_poll_timeout(i2c->base + SPACEMIT_ISR, val, !(val & (SPACEMIT_SR_UB | SPACEMIT_SR_IBB)),
+				 1500, SPACEMIT_I2C_BUS_RECOVER_TIMEOUT);
 	if (ret) {
 		spacemit_i2c_reset(i2c);
 		ret = -EAGAIN;
@@ -217,7 +217,7 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_check_bus_release(struct spacemit_i2c_dev *i2c)
 {
 	/* in case bus is not released after transfer completes */
-	if (readl(i2c->base + ISR) & SR_EBB) {
+	if (readl(i2c->base + SPACEMIT_ISR) & SPACEMIT_SR_EBB) {
 		spacemit_i2c_bus_reset(i2c);
 		usleep_range(90, 150);
 	}
@@ -231,38 +231,38 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 	 * Unmask interrupt bits for all xfer mode:
 	 * bus error, arbitration loss detected.
 	 * For transaction complete signal, we use master stop
-	 * interrupt, so we don't need to unmask CR_TXDONEIE.
+	 * interrupt, so we don't need to unmask SPACEMIT_CR_TXDONEIE.
 	 */
-	val |= CR_BEIE | CR_ALDIE;
+	val |= SPACEMIT_CR_BEIE | SPACEMIT_CR_ALDIE;
 
 	/*
 	 * Unmask interrupt bits for interrupt xfer mode:
 	 * DBR rx full.
-	 * For tx empty interrupt CR_DTEIE, we only
+	 * For tx empty interrupt SPACEMIT_CR_DTEIE, we only
 	 * need to enable when trigger byte transfer to start
 	 * data sending.
 	 */
-	val |= CR_DRFIE;
+	val |= SPACEMIT_CR_DRFIE;
 
 	/* set speed bits: default fast mode */
-	val |= CR_MODE_FAST;
+	val |= SPACEMIT_CR_MODE_FAST;
 
 	/* disable response to general call */
-	val |= CR_GCD;
+	val |= SPACEMIT_CR_GCD;
 
 	/* enable SCL clock output */
-	val |= CR_SCLE;
+	val |= SPACEMIT_CR_SCLE;
 
 	/* enable master stop detected */
-	val |= CR_MSDE | CR_MSDIE;
+	val |= SPACEMIT_CR_MSDE | SPACEMIT_CR_MSDIE;
 
-	writel(val, i2c->base + ICR);
+	writel(val, i2c->base + SPACEMIT_ICR);
 }
 
 static inline void
 spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 {
-	writel(mask & I2C_INT_STATUS_MASK, i2c->base + ISR);
+	writel(mask & SPACEMIT_I2C_INT_STATUS_MASK, i2c->base + SPACEMIT_ISR);
 }
 
 static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
@@ -277,28 +277,28 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	else
 		slave_addr_rw = (i2c->cur_msg->addr & 0x7f) << 1;
 
-	writel(slave_addr_rw, i2c->base + IDBR);
+	writel(slave_addr_rw, i2c->base + SPACEMIT_IDBR);
 
-	val = readl(i2c->base + ICR);
+	val = readl(i2c->base + SPACEMIT_ICR);
 
 	/* send start pulse */
-	val &= ~CR_STOP;
-	val |= CR_START | CR_TB | CR_DTEIE;
-	writel(val, i2c->base + ICR);
+	val &= ~SPACEMIT_CR_STOP;
+	val |= SPACEMIT_CR_START | SPACEMIT_CR_TB | SPACEMIT_CR_DTEIE;
+	writel(val, i2c->base + SPACEMIT_ICR);
 }
 
 static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
 
-	val = readl(i2c->base + ICR);
+	val = readl(i2c->base + SPACEMIT_ICR);
 
-	val |= CR_STOP | CR_ALDIE | CR_TB;
+	val |= SPACEMIT_CR_STOP | SPACEMIT_CR_ALDIE | SPACEMIT_CR_TB;
 
 	if (i2c->dir == DIR_READ)
-		val |= CR_ACKNAK;
+		val |= SPACEMIT_CR_ACKNAK;
 
-	writel(val, i2c->base + ICR);
+	writel(val, i2c->base + SPACEMIT_ICR);
 }
 
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
@@ -319,7 +319,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 		time_left = wait_for_completion_timeout(&i2c->complete,
 							i2c->adapt.timeout);
 		if (time_left == 0) {
-			dev_alert(i2c->dev, "msg completion timeout\n");
+			dev_err(i2c->dev, "msg completion timeout\n");
 			spacemit_i2c_bus_reset(i2c);
 			spacemit_i2c_reset(i2c);
 			return -ETIMEDOUT;
@@ -347,12 +347,12 @@ static int spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 {
-	/* if transfer completes, ISR will handle it */
-	if (i2c->status & SR_MSD)
+	/* if transfer completes, SPACEMIT_ISR will handle it */
+	if (i2c->status & SPACEMIT_SR_MSD)
 		return;
 
 	if (i2c->unprocessed) {
-		writel(*i2c->msg_buf++, i2c->base + IDBR);
+		writel(*i2c->msg_buf++, i2c->base + SPACEMIT_IDBR);
 		i2c->unprocessed--;
 		return;
 	}
@@ -365,12 +365,12 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 {
 	if (i2c->unprocessed) {
-		*i2c->msg_buf++ = readl(i2c->base + IDBR);
+		*i2c->msg_buf++ = readl(i2c->base + SPACEMIT_IDBR);
 		i2c->unprocessed--;
 	}
 
-	/* if transfer completes, ISR will handle it */
-	if (i2c->status & (SR_MSD | SR_ACKNAK))
+	/* if transfer completes, SPACEMIT_ISR will handle it */
+	if (i2c->status & (SPACEMIT_SR_MSD | SPACEMIT_SR_ACKNAK))
 		return;
 
 	/* it has to append stop bit in icr that read last byte */
@@ -402,13 +402,13 @@ static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 
 	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n",	i2c->status);
 
-	if (i2c->err & (SR_BED | SR_ALD))
+	if (i2c->err & (SPACEMIT_SR_BED | SPACEMIT_SR_ALD))
 		spacemit_i2c_reset(i2c);
 
-	if (i2c->err & (SR_RXOV | SR_ALD))
+	if (i2c->err & (SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD))
 		return -EAGAIN;
 
-	return (i2c->status & SR_ACKNAK) ? -ENXIO : -EIO;
+	return (i2c->status & SPACEMIT_SR_ACKNAK) ? -ENXIO : -EIO;
 }
 
 static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
@@ -418,7 +418,7 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (i2c->err || (i2c->status & SR_MSD)) {
+	if (i2c->err || (i2c->status & SPACEMIT_SR_MSD)) {
 		/*
 		 * Here the transaction is already done, we don't need any
 		 * other interrupt signals from now, in case any interrupt
@@ -426,11 +426,11 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 		 * we mask all the interrupt signals and clear the interrupt
 		 * status.
 		 */
-		val = readl(i2c->base + ICR);
-		val &= ~I2C_INT_CTRL_MASK;
-		writel(val, i2c->base + ICR);
+		val = readl(i2c->base + SPACEMIT_ICR);
+		val &= ~SPACEMIT_I2C_INT_CTRL_MASK;
+		writel(val, i2c->base + SPACEMIT_ICR);
 
-		spacemit_i2c_clear_int_status(i2c, I2C_INT_STATUS_MASK);
+		spacemit_i2c_clear_int_status(i2c, SPACEMIT_I2C_INT_STATUS_MASK);
 
 		i2c->state = STATE_IDLE;
 		complete(&i2c->complete);
@@ -442,23 +442,23 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 	struct spacemit_i2c_dev *i2c = devid;
 	u32 status, val;
 
-	status = readl(i2c->base + ISR);
+	status = readl(i2c->base + SPACEMIT_ISR);
 	if (!status)
 		return IRQ_HANDLED;
 
 	i2c->status = status;
 
-	i2c->err = status & (SR_BED | SR_RXOV | SR_ALD);
+	i2c->err = status & (SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD);
 
 	spacemit_i2c_clear_int_status(i2c, status);
 
 	if (i2c->err)
 		goto err_out;
 
-	val = readl(i2c->base + ICR);
+	val = readl(i2c->base + SPACEMIT_ICR);
 
-	val &= ~(CR_TB | CR_ACKNAK | CR_STOP | CR_START);
-	writel(val, i2c->base + ICR);
+	val &= ~(SPACEMIT_CR_TB | SPACEMIT_CR_ACKNAK | SPACEMIT_CR_STOP | SPACEMIT_CR_START);
+	writel(val, i2c->base + SPACEMIT_ICR);
 
 	switch (i2c->state) {
 	case STATE_START:
@@ -480,8 +480,8 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 			spacemit_i2c_stop(i2c);
 		} else {
 			/* trigger next byte */
-			val |= CR_ALDIE | CR_TB;
-			writel(val, i2c->base + ICR);
+			val |= SPACEMIT_CR_ALDIE | SPACEMIT_CR_TB;
+			writel(val, i2c->base + SPACEMIT_ICR);
 		}
 	}
 
@@ -500,7 +500,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 		idx++;
 	}
 
-	freq = I2C_FAST_MODE_FREQ;
+	freq = SPACEMIT_I2C_FAST_MODE_FREQ;
 	/*
 	 * multiply by 9 because each byte in I2C transmission requires
 	 * 9 clock cycles: 8 bits of data plus 1 ACK/NACK bit.
@@ -529,15 +529,8 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 		return ret;
 
 	ret = spacemit_i2c_xfer_msg(i2c);
-	if (ret < 0) {
+	if (ret < 0)
 		dev_dbg(i2c->dev, "i2c transfer error\n");
-		/* timeout error should not be overridden, and the transfer
-		 * error will be confirmed by err handle function latter,
-		 * the reset should be invalid argument error.
-		 */
-		if (ret != -ETIMEDOUT)
-			ret = -EINVAL;
-	}
 
 	return ret;
 }
