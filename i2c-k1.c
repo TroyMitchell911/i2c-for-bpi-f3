@@ -187,10 +187,8 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 
 	ret = readl_poll_timeout(i2c->base + SPACEMIT_ISR, val, !(val & (SPACEMIT_SR_UB | SPACEMIT_SR_IBB)),
 				 1500, SPACEMIT_I2C_BUS_BUSY_TIMEOUT);
-	if (ret) {
+	if (ret)
 		spacemit_i2c_reset(i2c);
-		ret = -EAGAIN;
-	}
 
 	return ret;
 }
