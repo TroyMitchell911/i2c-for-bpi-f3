@@ -201,12 +201,12 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 	u32 val;
 
 	val = readl(i2c->base + ISR);
-	if (likely(!(val & (SR_UB | SR_IBB))))
+	if (!(val & (SR_UB | SR_IBB)))
 		return 0;
 
 	ret = readl_poll_timeout(i2c->base + ISR, val, !(val & (SR_UB | SR_IBB)),
 				 1500, I2C_BUS_RECOVER_TIMEOUT);
-	if (unlikely(ret)) {
+	if (ret) {
 		spacemit_i2c_reset(i2c);
 		ret = -EAGAIN;
 	}
@@ -217,7 +217,7 @@ static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_check_bus_release(struct spacemit_i2c_dev *i2c)
 {
 	/* in case bus is not released after transfer completes */
-	if (unlikely(readl(i2c->base + ISR) & SR_EBB)) {
+	if (readl(i2c->base + ISR) & SR_EBB) {
 		spacemit_i2c_bus_reset(i2c);
 		usleep_range(90, 150);
 	}
@@ -318,14 +318,14 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 		time_left = wait_for_completion_timeout(&i2c->complete,
 							i2c->adapt.timeout);
-		if (unlikely(time_left == 0)) {
+		if (time_left == 0) {
 			dev_alert(i2c->dev, "msg completion timeout\n");
 			spacemit_i2c_bus_reset(i2c);
 			spacemit_i2c_reset(i2c);
 			return -ETIMEDOUT;
 		}
 
-		if (unlikely(i2c->err))
+		if (i2c->err)
 			return spacemit_i2c_handle_err(i2c);
 	}
 
@@ -418,7 +418,7 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (likely(i2c->err || (i2c->status & SR_MSD))) {
+	if (i2c->err || (i2c->status & SR_MSD)) {
 		/*
 		 * Here the transaction is already done, we don't need any
 		 * other interrupt signals from now, in case any interrupt
@@ -452,7 +452,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	spacemit_i2c_clear_int_status(i2c, status);
 
-	if (unlikely(i2c->err))
+	if (i2c->err)
 		goto err_out;
 
 	val = readl(i2c->base + ICR);
@@ -525,11 +525,11 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 
 	/* i2c wait for bus busy */
 	ret = spacemit_i2c_recover_bus_busy(i2c);
-	if (unlikely(ret))
+	if (ret)
 		return ret;
 
 	ret = spacemit_i2c_xfer_msg(i2c);
-	if (unlikely(ret < 0)) {
+	if (ret < 0) {
 		dev_dbg(i2c->dev, "i2c transfer error\n");
 		/* timeout error should not be overridden, and the transfer
 		 * error will be confirmed by err handle function latter,
@@ -551,14 +551,14 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], i
 	i2c->msg_num = num;
 
 	ret = spacemit_i2c_xfer_core(i2c);
-	if (likely(!ret))
+	if (!ret)
 		spacemit_i2c_check_bus_release(i2c);
 
 	disable_irq(i2c->irq);
 
 	spacemit_i2c_disable(i2c);
 
-	if (unlikely((ret == -ETIMEDOUT || ret == -EAGAIN)))
+	if (ret == -ETIMEDOUT || ret == -EAGAIN)
 		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%x\n", ret, i2c->err);
 
 	return ret < 0 ? ret : num;
