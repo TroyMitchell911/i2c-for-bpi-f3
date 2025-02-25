@@ -158,7 +158,7 @@ static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 	return (i2c->status & SPACEMIT_SR_ACKNAK) ? -ENXIO : -EIO;
 }
 
-static void spacemit_i2c_bus_reset(struct spacemit_i2c_dev *i2c)
+static void spacemit_i2c_conditionally_reset_bus(struct spacemit_i2c_dev *i2c)
 {
 	u32 status;
 
@@ -199,7 +199,7 @@ static void spacemit_i2c_check_bus_release(struct spacemit_i2c_dev *i2c)
 {
 	/* in case bus is not released after transfer completes */
 	if (readl(i2c->base + SPACEMIT_ISR) & SPACEMIT_SR_EBB) {
-		spacemit_i2c_bus_reset(i2c);
+		spacemit_i2c_conditionally_reset_bus(i2c);
 		usleep_range(90, 150);
 	}
 }
@@ -299,7 +299,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 							i2c->adapt.timeout);
 		if (time_left == 0) {
 			dev_err(i2c->dev, "msg completion timeout\n");
-			spacemit_i2c_bus_reset(i2c);
+			spacemit_i2c_conditionally_reset_bus(i2c);
 			spacemit_i2c_reset(i2c);
 			return -ETIMEDOUT;
 		}
