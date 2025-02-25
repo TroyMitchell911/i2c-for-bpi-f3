@@ -483,7 +483,7 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	return ret;
 }
 
-static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num)
+static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, int num)
 {
 	struct spacemit_i2c_dev *i2c = i2c_get_adapdata(adapt);
 	int ret;
@@ -518,12 +518,13 @@ static const struct i2c_algorithm spacemit_i2c_algo = {
 
 static int spacemit_i2c_probe(struct platform_device *pdev)
 {
-	struct spacemit_i2c_dev *i2c;
-	struct device_node *of_node = pdev->dev.of_node;
 	struct clk *clk;
+	struct device *dev = &pdev->dev;
+	struct device_node *of_node = pdev->dev.of_node;
+	struct spacemit_i2c_dev *i2c;
 	int ret = 0;
 
-	i2c = devm_kzalloc(&pdev->dev, sizeof(*i2c), GFP_KERNEL);
+	i2c = devm_kzalloc(dev, sizeof(*i2c), GFP_KERNEL);
 	if (!i2c)
 		return -ENOMEM;
 
@@ -531,22 +532,22 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	i2c->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(i2c->base))
-		return dev_err_probe(&pdev->dev, PTR_ERR(i2c->base), "failed to do ioremap");
+		return dev_err_probe(dev, PTR_ERR(i2c->base), "failed to do ioremap");
 
 	i2c->irq = platform_get_irq(pdev, 0);
 	if (i2c->irq < 0)
-		return dev_err_probe(&pdev->dev, i2c->irq, "failed to get irq resource");
+		return dev_err_probe(dev, i2c->irq, "failed to get irq resource");
 
 	ret = devm_request_irq(i2c->dev, i2c->irq, spacemit_i2c_irq_handler,
 			       IRQF_NO_SUSPEND | IRQF_ONESHOT, dev_name(i2c->dev), i2c);
 	if (ret)
-		return dev_err_probe(&pdev->dev, ret, "failed to request irq");
+		return dev_err_probe(dev, ret, "failed to request irq");
 
 	disable_irq(i2c->irq);
 
-	clk = devm_clk_get_enabled(&pdev->dev, NULL);
+	clk = devm_clk_get_enabled(dev, NULL);
 	if (IS_ERR(clk))
-		return dev_err_probe(&pdev->dev, PTR_ERR(clk), "failed to enable clock");
+		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable clock");
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
@@ -561,11 +562,11 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	init_completion(&i2c->complete);
 
+	platform_set_drvdata(pdev, i2c);
+
 	ret = i2c_add_numbered_adapter(&i2c->adapt);
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret, "failed to add i2c adapter");
-
-	platform_set_drvdata(pdev, i2c);
 
 	return 0;
 }
