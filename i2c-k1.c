@@ -103,7 +103,6 @@ struct spacemit_i2c_dev {
 
 	struct i2c_msg *msgs;
 	int msg_num;
-	struct i2c_msg *cur_msg;
 
 	/* index of the current message being processed */
 	int msg_idx;
@@ -244,15 +243,16 @@ spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
 	u32 slave_addr_rw, val;
+	struct i2c_msg* cur_msg = i2c->msgs + i2c->msg_idx;
 
-	i2c->read = i2c->cur_msg->flags & I2C_M_RD;
+	i2c->read = cur_msg->flags & I2C_M_RD;
 
 	i2c->state = STATE_START;
 
-	if (i2c->cur_msg->flags & I2C_M_RD)
-		slave_addr_rw = ((i2c->cur_msg->addr & 0x7f) << 1) | 1;
+	if (cur_msg->flags & I2C_M_RD)
+		slave_addr_rw = ((cur_msg->addr & 0x7f) << 1) | 1;
 	else
-		slave_addr_rw = (i2c->cur_msg->addr & 0x7f) << 1;
+		slave_addr_rw = (cur_msg->addr & 0x7f) << 1;
 
 	writel(slave_addr_rw, i2c->base + SPACEMIT_IDBR);
 
@@ -282,10 +282,9 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 	u32 err;
 
 	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
-		i2c->cur_msg = i2c->msgs + i2c->msg_idx;
-		i2c->msg_buf = i2c->cur_msg->buf;
+		i2c->msg_buf = (i2c->msgs + i2c->msg_idx)->buf;
 		i2c->status = 0;
-		i2c->unprocessed = i2c->cur_msg->len;
+		i2c->unprocessed = (i2c->msgs + i2c->msg_idx)->len;
 
 		reinit_completion(&i2c->complete);
 
