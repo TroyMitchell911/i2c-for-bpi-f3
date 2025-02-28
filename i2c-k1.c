@@ -513,7 +513,7 @@ static u32 spacemit_i2c_func(struct i2c_adapter *adap)
 }
 
 static const struct i2c_algorithm spacemit_i2c_algo = {
-	.master_xfer = spacemit_i2c_xfer,
+	.xfer = spacemit_i2c_xfer,
 	.functionality = spacemit_i2c_func,
 };
 
@@ -586,13 +586,11 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int spacemit_i2c_remove(struct platform_device *pdev)
+static void spacemit_i2c_remove(struct platform_device *pdev)
 {
 	struct spacemit_i2c_dev *i2c = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&i2c->adapt);
-
-	return 0;
 }
 
 static const struct of_device_id spacemit_i2c_of_match[] = {
