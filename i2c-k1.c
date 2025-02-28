@@ -81,8 +81,6 @@
 /* i2c bus recover timeout: us */
 #define SPACEMIT_I2C_BUS_BUSY_TIMEOUT	100000
 
-#define SPACEMIT_I2C_FAST_MODE_FREQ	400000
-
 #define SPACEMIT_I2C_GET_ERR(status)	(status & (SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD))
 
 enum spacemit_i2c_state {
@@ -100,6 +98,7 @@ struct spacemit_i2c_dev {
 	/* hardware resources */
 	void __iomem *base;
 	int irq;
+	u32 clock_freq;
 
 	struct i2c_msg *msgs;
 	int msg_num;
@@ -455,7 +454,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	 * multiply by 9 because each byte in I2C transmission requires
 	 * 9 clock cycles: 8 bits of data plus 1 ACK/NACK bit.
 	 */
-	timeout = cnt * 9 * USEC_PER_SEC /  SPACEMIT_I2C_FAST_MODE_FREQ;
+	timeout = cnt * 9 * USEC_PER_SEC / i2c->clock_freq;
 
 	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) / i2c->msg_num;
 }
@@ -530,6 +529,16 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (!i2c)
 		return -ENOMEM;
 
+	ret = of_property_read_u32(of_node, "clock-frequency", &i2c->clock_freq);
+	if (ret)
+		return dev_err_probe(dev, ret, "failed to read clock-frequency property");
+
+	/* For now, this driver doesn't support high-speed. */
+	if (i2c->clock_freq < 1 || i2c->clock_freq > 400000) {
+		dev_warn(dev, "unsupport clock frequency: %d, default: 400000", i2c->clock_freq);
+		i2c->clock_freq = 400000;
+	}
+
 	i2c->dev = &pdev->dev;
 
 	i2c->base = devm_platform_ioremap_resource(pdev, 0);
@@ -547,9 +556,13 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	disable_irq(i2c->irq);
 
-	clk = devm_clk_get_enabled(dev, NULL);
+	clk = devm_clk_get_enabled(dev, "apb");
 	if (IS_ERR(clk))
-		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable clock");
+		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable apb clock");
+
+	clk = devm_clk_get_enabled(dev, "twsi");
+	if (IS_ERR(clk))
+		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable twsi clock");
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
