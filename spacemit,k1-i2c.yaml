@@ -20,7 +20,8 @@ properties:
     maxItems: 1
 
   clocks:
-    maxItems: 1
+    minItems: 2
+    maxItems: 2
 
   clock-frequency:
     description: |
@@ -46,7 +47,8 @@ examples:
         reg = <0xd4010800 0x38>;
         interrupt-parent = <&plic>;
         interrupts = <36>;
-        clocks = <&ccu 90>;
+        clocks = <&ccu 176>, <&ccu 90>;
+        clock-output-names = "apb", "twsi";
         clock-frequency = <100000>;
     };
 
