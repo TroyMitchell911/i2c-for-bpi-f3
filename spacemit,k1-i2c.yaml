@@ -23,6 +23,10 @@ properties:
     minItems: 2
     maxItems: 2
 
+  clock-names:
+    minItems: 2
+    maxItems: 2
+
   clock-frequency:
     description: |
       K1 support three different modes which running different frequencies
@@ -48,7 +52,7 @@ examples:
         interrupt-parent = <&plic>;
         interrupts = <36>;
         clocks = <&ccu 176>, <&ccu 90>;
-        clock-output-names = "apb", "twsi";
+        clock-names = "apb", "twsi";
         clock-frequency = <100000>;
     };
 
