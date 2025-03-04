@@ -16,25 +16,25 @@
 #define SPACEMIT_IDBR         	 0xc		/* Data Buffer Register */
 #define SPACEMIT_IBMR         	 0x1c		/* Bus monitor register */
 
-/* register SPACEMIT_ICR fields */
+/* SPACEMIT_ICR register fields */
 #define SPACEMIT_CR_START        BIT(0)		/* start bit */
 #define SPACEMIT_CR_STOP         BIT(1)		/* stop bit */
 #define SPACEMIT_CR_ACKNAK       BIT(2)		/* send ACK(0) or NAK(1) */
 #define SPACEMIT_CR_TB           BIT(3)		/* transfer byte bit */
-/* Bit 4-7 are reserved */
+/* Bits 4-7 are reserved */
 #define SPACEMIT_CR_MODE_FAST    BIT(8)		/* bus mode (master operation) */
 /* Bit 9 is reserved */
 #define SPACEMIT_CR_UR           BIT(10)	/* unit reset */
-/* Bit 11-12 are reserved */
+/* Bits 11-12 are reserved */
 #define SPACEMIT_CR_SCLE         BIT(13)	/* master clock enable */
 #define SPACEMIT_CR_IUE          BIT(14)	/* unit enable */
-/* Bit 15-17 are reserved */
+/* Bits 15-17 are reserved */
 #define SPACEMIT_CR_ALDIE        BIT(18)	/* enable arbitration interrupt */
 #define SPACEMIT_CR_DTEIE        BIT(19)	/* enable tx interrupts */
 #define SPACEMIT_CR_DRFIE        BIT(20)	/* enable rx interrupts */
 #define SPACEMIT_CR_GCD          BIT(21)	/* general call disable */
 #define SPACEMIT_CR_BEIE         BIT(22)	/* enable bus error ints */
-/* Bit 23-24 are reserved */
+/* Bits 23-24 are reserved */
 #define SPACEMIT_CR_MSDIE        BIT(25)	/* master STOP detected int enable */
 #define SPACEMIT_CR_MSDE         BIT(26)	/* master STOP detected enable */
 #define SPACEMIT_CR_TXDONEIE     BIT(27)	/* transaction done int enable */
@@ -48,7 +48,8 @@
 					SPACEMIT_CR_RXHFIE | SPACEMIT_CR_RXFIE | SPACEMIT_CR_RXOVIE | \
 					SPACEMIT_CR_MSDIE)
 
-/* register SPACEMIT_ISR fields */
+/* SPACEMIT_ISR fregister ields */
+/* Bits 0-13 are reserved */
 #define SPACEMIT_SR_ACKNAK       BIT(14)	/* ACK/NACK status */
 #define SPACEMIT_SR_UB           BIT(15)	/* unit busy */
 #define SPACEMIT_SR_IBB          BIT(16)	/* i2c bus busy */
@@ -74,7 +75,7 @@
 					SPACEMIT_SR_GCAD | SPACEMIT_SR_IRF | SPACEMIT_SR_ITE | \
 					SPACEMIT_SR_ALD)
 
-/* register SPACEMIT_IBMR fields */
+/* SPACEMIT_IBMR register fields */
 #define SPACEMIT_BMR_SDA         BIT(0)		/* SDA line level */
 #define SPACEMIT_BMR_SCL         BIT(1)		/* SCL line level */
 
