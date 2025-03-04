@@ -363,13 +363,12 @@ static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
-	u32 err = i2c->status & SPACEMIT_ERR;
 
 	/*
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (!err && !(i2c->status & SPACEMIT_SR_MSD))
+	if (!(i2c->status & (SPACEMIT_ERR | SPACEMIT_SR_MSD)))
 		return;
 
 	/*
