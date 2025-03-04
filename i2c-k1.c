@@ -172,9 +172,9 @@ static void spacemit_i2c_conditionally_reset_bus(struct spacemit_i2c_dev *i2c)
 		dev_warn_ratelimited(i2c->dev, "unit reset failed\n");
 }
 
-static int spacemit_i2c_recover_bus_busy(struct spacemit_i2c_dev *i2c)
+static int spacemit_i2c_wait_bus_busy(struct spacemit_i2c_dev *i2c)
 {
-	int ret = 0;
+	int ret;
 	u32 val;
 
 	val = readl(i2c->base + SPACEMIT_ISR);
