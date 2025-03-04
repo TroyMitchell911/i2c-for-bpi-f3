@@ -244,14 +244,13 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	u32 slave_addr_rw, val;
 	struct i2c_msg* cur_msg = i2c->msgs + i2c->msg_idx;
 
-	i2c->read = cur_msg->flags & I2C_M_RD;
+	i2c->read = !!(cur_msg->flags & I2C_M_RD);
 
 	i2c->state = STATE_START;
 
+	slave_addr_rw = (cur_msg->addr & 0x7f) << 1;
 	if (cur_msg->flags & I2C_M_RD)
-		slave_addr_rw = ((cur_msg->addr & 0x7f) << 1) | 1;
-	else
-		slave_addr_rw = (cur_msg->addr & 0x7f) << 1;
+		slave_addr_rw |= 1;
 
 	writel(slave_addr_rw, i2c->base + SPACEMIT_IDBR);
 
