@@ -82,7 +82,7 @@
 /* i2c bus recover timeout: us */
 #define SPACEMIT_I2C_BUS_BUSY_TIMEOUT	100000
 
-#define SPACEMIT_ERR	(SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD)
+#define SPACEMIT_SR_ERR	(SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD)
 
 enum spacemit_i2c_state {
 	STATE_IDLE,
@@ -143,7 +143,7 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 {
-	u32 err = i2c->status & SPACEMIT_ERR;
+	u32 err = i2c->status & SPACEMIT_SR_ERR;
 	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n", i2c->status);
 
 	if (err & (SPACEMIT_SR_BED | SPACEMIT_SR_ALD)) {
@@ -278,7 +278,6 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 {
 	unsigned long time_left;
-	u32 err;
 
 	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
 		i2c->msg_buf = (i2c->msgs + i2c->msg_idx)->buf;
@@ -298,7 +297,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 			return -ETIMEDOUT;
 		}
 
-		if (i2c->status & SPACEMIT_ERR)
+		if (i2c->status & SPACEMIT_SR_ERR)
 			return spacemit_i2c_handle_err(i2c);
 	}
 
@@ -368,7 +367,7 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 	 * send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (!(i2c->status & (SPACEMIT_ERR | SPACEMIT_SR_MSD)))
+	if (!(i2c->status & (SPACEMIT_SR_ERR | SPACEMIT_SR_MSD)))
 		return;
 
 	/*
@@ -401,7 +400,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	spacemit_i2c_clear_int_status(i2c, status);
 
-	if (i2c->status & SPACEMIT_ERR)
+	if (i2c->status & SPACEMIT_SR_ERR)
 		goto err_out;
 
 	val = readl(i2c->base + SPACEMIT_ICR);
@@ -470,8 +469,7 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 	spacemit_i2c_enable(i2c);
 	enable_irq(i2c->irq);
 
-	/* i2c wait for bus busy */
-	ret = spacemit_i2c_recover_bus_busy(i2c);
+	ret = spacemit_i2c_wait_bus_busy(i2c);
 	if (ret)
 		return ret;
 
@@ -499,7 +497,7 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, in
 	spacemit_i2c_disable(i2c);
 
 	if (ret == -ETIMEDOUT || ret == -EAGAIN)
-		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%x\n", ret, i2c->status & SPACEMIT_ERR);
+		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%lx\n", ret, i2c->status & SPACEMIT_SR_ERR);
 
 	return ret < 0 ? ret : num;
 }
