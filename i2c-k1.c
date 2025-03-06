@@ -551,13 +551,13 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	disable_irq(i2c->irq);
 
-	clk = devm_clk_get_enabled(dev, "apb");
+	clk = devm_clk_get_enabled(dev, "func");
 	if (IS_ERR(clk))
-		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable apb clock");
+		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable func clock");
 
-	clk = devm_clk_get_enabled(dev, "twsi");
+	clk = devm_clk_get_enabled(dev, "bus");
 	if (IS_ERR(clk))
-		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable twsi clock");
+		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable bus clock");
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
