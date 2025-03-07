@@ -477,7 +477,7 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, in
 		spacemit_i2c_xfer_msg(i2c);
 
 	if (ret < 0)
-		dev_dbg(i2c->dev, "i2c transfer error\n");
+		dev_dbg(i2c->dev, "i2c transfer error: %d\n", ret);
 	else if (ret)
 		spacemit_i2c_check_bus_release(i2c);
 
