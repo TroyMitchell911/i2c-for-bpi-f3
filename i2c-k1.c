@@ -48,7 +48,7 @@
 					SPACEMIT_CR_RXHFIE | SPACEMIT_CR_RXFIE | SPACEMIT_CR_RXOVIE | \
 					SPACEMIT_CR_MSDIE)
 
-/* SPACEMIT_ISR fregister ields */
+/* SPACEMIT_ISR register fields */
 /* Bits 0-13 are reserved */
 #define SPACEMIT_SR_ACKNAK       BIT(14)	/* ACK/NACK status */
 #define SPACEMIT_SR_UB           BIT(15)	/* unit busy */
@@ -146,10 +146,9 @@ static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 
 static int spacemit_i2c_handle_err(struct spacemit_i2c_dev *i2c)
 {
-	u32 err = i2c->status & SPACEMIT_SR_ERR;
 	dev_dbg(i2c->dev, "i2c error status: 0x%08x\n", i2c->status);
 
-	if (err & (SPACEMIT_SR_BED | SPACEMIT_SR_ALD)) {
+	if (i2c->status & (SPACEMIT_SR_BED | SPACEMIT_SR_ALD)) {
 		spacemit_i2c_reset(i2c);
 		return -EAGAIN;
 	}
