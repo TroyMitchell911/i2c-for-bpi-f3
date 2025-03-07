@@ -520,6 +520,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		dev_warn(dev, "unsupport clock frequency: %d, default: %d",
 			 i2c->clock_freq, SPACEMIT_I2C_MAX_FAST_MODE_FREQ);
 		i2c->clock_freq = SPACEMIT_I2C_MAX_FAST_MODE_FREQ;
+	} else if (i2c->clock_freq < SPACEMIT_I2C_MAX_STANDARD_MODE_FREQ) {
+		i2c->clock_freq = SPACEMIT_I2C_MAX_STANDARD_MODE_FREQ;
 	}
 
 	i2c->dev = &pdev->dev;
