@@ -458,27 +458,6 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) / i2c->msg_num;
 }
 
-static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
-{
-	int ret;
-
-	spacemit_i2c_calc_timeout(i2c);
-
-	spacemit_i2c_init(i2c);
-
-	spacemit_i2c_enable(i2c);
-
-	ret = spacemit_i2c_wait_bus_busy(i2c);
-	if (ret)
-		return ret;
-
-	ret = spacemit_i2c_xfer_msg(i2c);
-	if (ret < 0)
-		dev_dbg(i2c->dev, "i2c transfer error\n");
-
-	return ret;
-}
-
 static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, int num)
 {
 	struct spacemit_i2c_dev *i2c = i2c_get_adapdata(adapt);
@@ -487,8 +466,19 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, in
 	i2c->msgs = msgs;
 	i2c->msg_num = num;
 
-	ret = spacemit_i2c_xfer_core(i2c);
+	spacemit_i2c_calc_timeout(i2c);
+
+	spacemit_i2c_init(i2c);
+
+	spacemit_i2c_enable(i2c);
+
+	ret = spacemit_i2c_wait_bus_busy(i2c);
 	if (!ret)
+		spacemit_i2c_xfer_msg(i2c);
+
+	if (ret < 0)
+		dev_dbg(i2c->dev, "i2c transfer error\n");
+	else if (ret)
 		spacemit_i2c_check_bus_release(i2c);
 
 	spacemit_i2c_disable(i2c);
