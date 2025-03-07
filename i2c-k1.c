@@ -13,8 +13,8 @@
 /* spacemit i2c registers */
 #define SPACEMIT_ICR		 0x0		/* Control Register */
 #define SPACEMIT_ISR		 0x4		/* Status Register */
-#define SPACEMIT_IDBR         	 0xc		/* Data Buffer Register */
-#define SPACEMIT_IBMR         	 0x1c		/* Bus monitor register */
+#define SPACEMIT_IDBR		 0xc		/* Data Buffer Register */
+#define SPACEMIT_IBMR		 0x1c		/* Bus monitor register */
 
 /* SPACEMIT_ICR register fields */
 #define SPACEMIT_CR_START        BIT(0)		/* start bit */
@@ -43,10 +43,11 @@
 #define SPACEMIT_CR_RXFIE        BIT(30)	/* receive FIFO full int enable */
 #define SPACEMIT_CR_RXOVIE       BIT(31)	/* receive FIFO overrun int enable */
 
-#define SPACEMIT_I2C_INT_CTRL_MASK      (SPACEMIT_CR_ALDIE | SPACEMIT_CR_DTEIE | SPACEMIT_CR_DRFIE | \
-					SPACEMIT_CR_BEIE | SPACEMIT_CR_TXDONEIE | SPACEMIT_CR_TXEIE | \
-					SPACEMIT_CR_RXHFIE | SPACEMIT_CR_RXFIE | SPACEMIT_CR_RXOVIE | \
-					SPACEMIT_CR_MSDIE)
+#define SPACEMIT_I2C_INT_CTRL_MASK	(SPACEMIT_CR_ALDIE | SPACEMIT_CR_DTEIE | \
+					 SPACEMIT_CR_DRFIE | SPACEMIT_CR_BEIE | \
+					 SPACEMIT_CR_TXDONEIE | SPACEMIT_CR_TXEIE | \
+					 SPACEMIT_CR_RXHFIE | SPACEMIT_CR_RXFIE | \
+					 SPACEMIT_CR_RXOVIE | SPACEMIT_CR_MSDIE)
 
 /* SPACEMIT_ISR register fields */
 /* Bits 0-13 are reserved */
@@ -183,7 +184,8 @@ static int spacemit_i2c_wait_bus_busy(struct spacemit_i2c_dev *i2c)
 	if (!(val & (SPACEMIT_SR_UB | SPACEMIT_SR_IBB)))
 		return 0;
 
-	ret = readl_poll_timeout(i2c->base + SPACEMIT_ISR, val, !(val & (SPACEMIT_SR_UB | SPACEMIT_SR_IBB)),
+	ret = readl_poll_timeout(i2c->base + SPACEMIT_ISR,
+				 val, !(val & (SPACEMIT_SR_UB | SPACEMIT_SR_IBB)),
 				 1500, SPACEMIT_I2C_BUS_BUSY_TIMEOUT);
 	if (ret)
 		spacemit_i2c_reset(i2c);
@@ -245,7 +247,7 @@ spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
 	u32 slave_addr_rw, val;
-	struct i2c_msg* cur_msg = i2c->msgs + i2c->msg_idx;
+	struct i2c_msg *cur_msg = i2c->msgs + i2c->msg_idx;
 
 	i2c->read = !!(cur_msg->flags & I2C_M_RD);
 
@@ -373,12 +375,12 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 		return;
 
 	/*
-		* Here the transaction is already done, we don't need any
-		* other interrupt signals from now, in case any interrupt
-		* happens before spacemit_i2c_xfer to disable irq and i2c unit,
-		* we mask all the interrupt signals and clear the interrupt
-		* status.
-		*/
+	 * Here the transaction is already done, we don't need any
+	 * other interrupt signals from now, in case any interrupt
+	 * happens before spacemit_i2c_xfer to disable irq and i2c unit,
+	 * we mask all the interrupt signals and clear the interrupt
+	 * status.
+	 */
 	val = readl(i2c->base + SPACEMIT_ICR);
 	val &= ~SPACEMIT_I2C_INT_CTRL_MASK;
 	writel(val, i2c->base + SPACEMIT_ICR);
@@ -484,7 +486,8 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, in
 	spacemit_i2c_disable(i2c);
 
 	if (ret == -ETIMEDOUT || ret == -EAGAIN)
-		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%lx\n", ret, i2c->status & SPACEMIT_SR_ERR);
+		dev_alert(i2c->dev, "i2c transfer failed, ret %d err 0x%lx\n",
+			  ret, i2c->status & SPACEMIT_SR_ERR);
 
 	return ret < 0 ? ret : num;
 }
