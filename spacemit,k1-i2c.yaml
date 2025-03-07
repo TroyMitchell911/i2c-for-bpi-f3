@@ -20,15 +20,11 @@ properties:
     maxItems: 1
 
   clocks:
-    minItems: 2
-    maxItems: 2
     items:
       - description: I2C Functional Clock
       - description: APB Bus Clock
 
   clock-names:
-    minItems: 2
-    maxItems: 2
     items:
       - const: func
       - const: bus
@@ -58,7 +54,7 @@ examples:
         interrupt-parent = <&plic>;
         interrupts = <36>;
         clocks =<&ccu 32>, <&ccu 84>;
-        clock-names = "func", "bus;
+        clock-names = "func", "bus";
         clock-frequency = <100000>;
     };
 
