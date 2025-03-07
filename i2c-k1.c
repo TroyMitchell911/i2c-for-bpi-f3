@@ -462,14 +462,11 @@ static int spacemit_i2c_xfer_core(struct spacemit_i2c_dev *i2c)
 {
 	int ret;
 
-	spacemit_i2c_reset(i2c);
-
 	spacemit_i2c_calc_timeout(i2c);
 
 	spacemit_i2c_init(i2c);
 
 	spacemit_i2c_enable(i2c);
-	enable_irq(i2c->irq);
 
 	ret = spacemit_i2c_wait_bus_busy(i2c);
 	if (ret)
@@ -493,8 +490,6 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, in
 	ret = spacemit_i2c_xfer_core(i2c);
 	if (!ret)
 		spacemit_i2c_check_bus_release(i2c);
-
-	disable_irq(i2c->irq);
 
 	spacemit_i2c_disable(i2c);
 
@@ -552,8 +547,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (ret)
 		return dev_err_probe(dev, ret, "failed to request irq");
 
-	disable_irq(i2c->irq);
-
 	clk = devm_clk_get_enabled(dev, "func");
 	if (IS_ERR(clk))
 		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable func clock");
@@ -561,6 +554,8 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	clk = devm_clk_get_enabled(dev, "bus");
 	if (IS_ERR(clk))
 		return dev_err_probe(dev, PTR_ERR(clk), "failed to enable bus clock");
+
+	spacemit_i2c_reset(i2c);
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
