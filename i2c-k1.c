@@ -517,14 +517,16 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 
 	ret = of_property_read_u32(of_node, "clock-frequency", &i2c->clock_freq);
 	if (ret)
-		return dev_err_probe(dev, ret, "failed to read clock-frequency property");
+		dev_warn(dev, "failed to read clock-frequency property\n");
 
 	/* For now, this driver doesn't support high-speed. */
-	if (i2c->clock_freq < 1 || i2c->clock_freq > SPACEMIT_I2C_MAX_FAST_MODE_FREQ) {
-		dev_warn(dev, "unsupport clock frequency: %d, default: %d",
+	if (!i2c->clock_freq || i2c->clock_freq < 1 || i2c->clock_freq > SPACEMIT_I2C_MAX_FAST_MODE_FREQ) {
+		dev_warn(dev, "unsupported clock frequency %u; using %u\n",
 			 i2c->clock_freq, SPACEMIT_I2C_MAX_FAST_MODE_FREQ);
 		i2c->clock_freq = SPACEMIT_I2C_MAX_FAST_MODE_FREQ;
 	} else if (i2c->clock_freq < SPACEMIT_I2C_MAX_STANDARD_MODE_FREQ) {
+		dev_warn(dev, "unsupported clock frequency %u; using %u\n",
+			 i2c->clock_freq,  SPACEMIT_I2C_MAX_STANDARD_MODE_FREQ);
 		i2c->clock_freq = SPACEMIT_I2C_MAX_STANDARD_MODE_FREQ;
 	}
 
@@ -560,7 +562,6 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	i2c->adapt.nr = pdev->id;
 
 	i2c->adapt.dev.of_node = of_node;
-	i2c->adapt.algo_data = i2c;
 
 	strscpy(i2c->adapt.name, "spacemit-i2c-adapter", sizeof(i2c->adapt.name));
 
