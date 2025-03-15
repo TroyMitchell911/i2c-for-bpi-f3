@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2024 Troy Mitchell <troymitchell988@gmail.com>
+ * Copyright (C) 2024-2025 Troy Mitchell <troymitchell988@gmail.com>
  */
 
  #include <linux/clk.h>
