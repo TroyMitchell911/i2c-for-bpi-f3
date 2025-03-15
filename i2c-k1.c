@@ -175,7 +175,7 @@ static void spacemit_i2c_conditionally_reset_bus(struct spacemit_i2c_dev *i2c)
 		dev_warn_ratelimited(i2c->dev, "unit reset failed\n");
 }
 
-static int spacemit_i2c_wait_bus_busy(struct spacemit_i2c_dev *i2c)
+static int spacemit_i2c_wait_bus_idle(struct spacemit_i2c_dev *i2c)
 {
 	int ret;
 	u32 val;
@@ -474,7 +474,7 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, in
 
 	spacemit_i2c_enable(i2c);
 
-	ret = spacemit_i2c_wait_bus_busy(i2c);
+	ret = spacemit_i2c_wait_bus_idle(i2c);
 	if (!ret)
 		spacemit_i2c_xfer_msg(i2c);
 
