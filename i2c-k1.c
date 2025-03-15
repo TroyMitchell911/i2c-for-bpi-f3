@@ -11,9 +11,9 @@
  #include <linux/platform_device.h>
 
 /* spacemit i2c registers */
-#define SPACEMIT_ICR		 0x0		/* Control Register */
-#define SPACEMIT_ISR		 0x4		/* Status Register */
-#define SPACEMIT_IDBR		 0xc		/* Data Buffer Register */
+#define SPACEMIT_ICR		 0x0		/* Control register */
+#define SPACEMIT_ISR		 0x4		/* Status register */
+#define SPACEMIT_IDBR		 0xc		/* Data buffer register */
 #define SPACEMIT_IBMR		 0x1c		/* Bus monitor register */
 
 /* SPACEMIT_ICR register fields */
@@ -30,8 +30,8 @@
 #define SPACEMIT_CR_IUE          BIT(14)	/* unit enable */
 /* Bits 15-17 are reserved */
 #define SPACEMIT_CR_ALDIE        BIT(18)	/* enable arbitration interrupt */
-#define SPACEMIT_CR_DTEIE        BIT(19)	/* enable tx interrupts */
-#define SPACEMIT_CR_DRFIE        BIT(20)	/* enable rx interrupts */
+#define SPACEMIT_CR_DTEIE        BIT(19)	/* enable TX interrupts */
+#define SPACEMIT_CR_DRFIE        BIT(20)	/* enable RX interrupts */
 #define SPACEMIT_CR_GCD          BIT(21)	/* general call disable */
 #define SPACEMIT_CR_BEIE         BIT(22)	/* enable bus error ints */
 /* Bits 23-24 are reserved */
@@ -56,8 +56,8 @@
 #define SPACEMIT_SR_IBB          BIT(16)	/* i2c bus busy */
 #define SPACEMIT_SR_EBB          BIT(17)	/* early bus busy */
 #define SPACEMIT_SR_ALD          BIT(18)	/* arbitration loss detected */
-#define SPACEMIT_SR_ITE          BIT(19)	/* tx buffer empty */
-#define SPACEMIT_SR_IRF          BIT(20)	/* rx buffer full */
+#define SPACEMIT_SR_ITE          BIT(19)	/* TX buffer empty */
+#define SPACEMIT_SR_IRF          BIT(20)	/* RX buffer full */
 #define SPACEMIT_SR_GCAD         BIT(21)	/* general call address detected */
 #define SPACEMIT_SR_BED          BIT(22)	/* bus error no ACK/NAK */
 #define SPACEMIT_SR_SAD          BIT(23)	/* slave address detected */
@@ -65,9 +65,9 @@
 /* Bit 25 is reserved */
 #define SPACEMIT_SR_MSD          BIT(26)	/* master stop detected */
 #define SPACEMIT_SR_TXDONE       BIT(27)	/* transaction done */
-#define SPACEMIT_SR_TXE          BIT(28)	/* tx FIFO empty */
-#define SPACEMIT_SR_RXHF         BIT(29)	/* rx FIFO half-full */
-#define SPACEMIT_SR_RXF          BIT(30)	/* rx FIFO full */
+#define SPACEMIT_SR_TXE          BIT(28)	/* TX FIFO empty */
+#define SPACEMIT_SR_RXHF         BIT(29)	/* RX FIFO half-full */
+#define SPACEMIT_SR_RXF          BIT(30)	/* RX FIFO full */
 #define SPACEMIT_SR_RXOV         BIT(31)	/* RX FIFO overrun */
 
 #define SPACEMIT_I2C_INT_STATUS_MASK	(SPACEMIT_SR_RXOV | SPACEMIT_SR_RXF | SPACEMIT_SR_RXHF | \
@@ -81,12 +81,12 @@
 #define SPACEMIT_BMR_SCL         BIT(1)		/* SCL line level */
 
 /* i2c bus recover timeout: us */
-#define SPACEMIT_I2C_BUS_BUSY_TIMEOUT	100000
-
-#define SPACEMIT_SR_ERR	(SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD)
+#define SPACEMIT_I2C_BUS_BUSY_TIMEOUT		100000
 
 #define SPACEMIT_I2C_MAX_STANDARD_MODE_FREQ	100000
 #define SPACEMIT_I2C_MAX_FAST_MODE_FREQ		400000
+
+#define SPACEMIT_SR_ERR	(SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD)
 
 enum spacemit_i2c_state {
 	STATE_IDLE,
@@ -111,7 +111,7 @@ struct spacemit_i2c_dev {
 	/* index of the current message being processed */
 	int msg_idx;
 	u8 *msg_buf;
-	/* the number of unprocessed bytes remaining in each message  */
+	/* the number of unprocessed bytes remaining in the current message  */
 	size_t unprocessed;
 
 	enum spacemit_i2c_state state;
@@ -216,7 +216,7 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 
 	/*
 	 * Unmask interrupt bits for interrupt xfer mode:
-	 * DBR rx full.
+	 * DBR RX full.
 	 * For tx empty interrupt SPACEMIT_CR_DTEIE, we only
 	 * need to enable when trigger byte transfer to start
 	 * data sending.
