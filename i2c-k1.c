@@ -106,13 +106,13 @@ struct spacemit_i2c_dev {
 	u32 clock_freq;
 
 	struct i2c_msg *msgs;
-	int msg_num;
+	u32 msg_num;
 
 	/* index of the current message being processed */
-	int msg_idx;
+	u32 msg_idx;
 	u8 *msg_buf;
 	/* the number of unprocessed bytes remaining in the current message  */
-	size_t unprocessed;
+	u32 unprocessed;
 
 	enum spacemit_i2c_state state;
 	bool read;
