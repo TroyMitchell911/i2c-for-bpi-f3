@@ -458,7 +458,7 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	 */
 	timeout = cnt * 9 * USEC_PER_SEC / i2c->clock_freq;
 
-	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 2) / i2c->msg_num;
+	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 10) / i2c->msg_num;
 }
 
 static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, int num)
