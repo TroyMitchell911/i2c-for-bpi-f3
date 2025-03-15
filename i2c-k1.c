@@ -284,9 +284,10 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 	unsigned long time_left;
 
 	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
-		i2c->msg_buf = (i2c->msgs + i2c->msg_idx)->buf;
+		struct i2c_msg *msg = &i2c->msgs[i2c->msg_idx];
+		i2c->msg_buf = msg->buf;
+		i2c->unprocessed = msg->len;
 		i2c->status = 0;
-		i2c->unprocessed = (i2c->msgs + i2c->msg_idx)->len;
 
 		reinit_completion(&i2c->complete);
 
@@ -294,7 +295,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 
 		time_left = wait_for_completion_timeout(&i2c->complete,
 							i2c->adapt.timeout);
-		if (time_left == 0) {
+		if (!time_left) {
 			dev_err(i2c->dev, "msg completion timeout\n");
 			spacemit_i2c_conditionally_reset_bus(i2c);
 			spacemit_i2c_reset(i2c);
