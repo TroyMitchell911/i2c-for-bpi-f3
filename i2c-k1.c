@@ -247,18 +247,18 @@ spacemit_i2c_clear_int_status(struct spacemit_i2c_dev *i2c, u32 mask)
 
 static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
-	u32 slave_addr_rw, val;
+	u32 target_addr_rw, val;
 	struct i2c_msg *cur_msg = i2c->msgs + i2c->msg_idx;
 
 	i2c->read = !!(cur_msg->flags & I2C_M_RD);
 
 	i2c->state = SPACEMIT_STATE_START;
 
-	slave_addr_rw = (cur_msg->addr & 0x7f) << 1;
+	target_addr_rw = (cur_msg->addr & 0x7f) << 1;
 	if (cur_msg->flags & I2C_M_RD)
-		slave_addr_rw |= 1;
+		target_addr_rw |= 1;
 
-	writel(slave_addr_rw, i2c->base + SPACEMIT_IDBR);
+	writel(target_addr_rw, i2c->base + SPACEMIT_IDBR);
 
 	/* send start pulse */
 	val = readl(i2c->base + SPACEMIT_ICR);
