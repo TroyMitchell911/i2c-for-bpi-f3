@@ -107,10 +107,9 @@
 #define SPACEMIT_I2C_MAX_STANDARD_MODE_FREQ	100000	/* Hz */
 #define SPACEMIT_I2C_MAX_FAST_MODE_FREQ		400000	/* Hz */
 
-#define SPACEMIT_SR_ERR	(SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD)
+#define SPACEMIT_I2C_FIFO_DEPTH			8
 
-#define SPACEMIT_I2C_TX_FIFO_DEPTH		8
-#define SPACEMIT_I2C_RX_FIFO_DEPTH		16
+#define SPACEMIT_SR_ERR	(SPACEMIT_SR_BED | SPACEMIT_SR_RXOV | SPACEMIT_SR_ALD)
 
 enum spacemit_i2c_state {
 	SPACEMIT_STATE_IDLE,
@@ -380,41 +379,43 @@ static bool spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 #endif
 }
 
-static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
+static u16 spacemit_i2c_fill_fifo(struct spacemit_i2c_dev *i2c)
 {
-#if I2C_FIFO
-	int fill = 0, i;
-	size_t unprocessed;
-	u16 len;
-	u32 data_buf[SPACEMIT_I2C_TX_FIFO_DEPTH * 2];
-	u32 data;
-	u32 val;
+	u32 data_buf[SPACEMIT_I2C_FIFO_DEPTH], data, unprocessed;
+	u16 len, i;
+	char *msg_buf = i2c->msg_buf;
 
 	unprocessed = i2c->unprocessed;
+	/* The last byte will be processed in spacemit_i2c_stop */
 	if (i2c->msg_idx == i2c->msg_num - 1)
 		unprocessed -= 1;
 
 	len = min_t(size_t,
 		    unprocessed,
-		    SPACEMIT_I2C_TX_FIFO_DEPTH - fill);
+		    SPACEMIT_I2C_FIFO_DEPTH);
 
-	DEBUG("fill len: %d", len);
-	len += fill;
-
-	for (; fill < len; fill ++) {
-		data = *(i2c->msg_buf++);
-		i2c->unprocessed --;
+	for (i = 0; i < len; i++) {
+		data = *(msg_buf++);
 		data |= SPACEMIT_WFIFO_CTRL_TB;
-		data_buf[fill] = data;
+		data_buf[i] = data;
 	}
 
-	for (i = 0; i < fill; i++) {
-		/*dev_err(i2c->dev, "write: %x\n", data_buf[i]);*/
+	for (i = 0; i < len; i++) {
 		writel(data_buf[i], i2c->base + SPACEMIT_IWFIFO);
-		u32 count = 0;
-		/*count = spacemit_i2c_read_reg(i2c, IWFIFO_WPTR);*/
-		/*dev_err(i2c->dev, "write count: %d\n", count & 0xf);*/
+		if (i2c->state == SPACEMIT_STATE_WRITE)
+			i2c->unprocessed --;
 	}
+
+	return len;
+}
+
+static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
+{
+#if I2C_FIFO
+	u32 val;
+
+	spacemit_i2c_fill_fifo(i2c);
+
 	val = readl(i2c->base + SPACEMIT_ICR);
 	val |= SPACEMIT_CR_TXEIE;
 	writel(val, i2c->base + SPACEMIT_ICR);
@@ -446,54 +447,13 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 {
 #if I2C_FIFO
-	u32 data_buf[SPACEMIT_I2C_RX_FIFO_DEPTH];
-	u16 len;
-	u32 unprocessed;
-	int fill = 0, i;
-	u32 data;
-	char *msg_buf = i2c->msg_buf;
-/*
-	if (i2c->unprocessed == i2c->cur_msg->len) {
-		data = i2c->slave_addr_rw;
-		data |= WFIFO_CTRL_TB | WFIFO_CTRL_START;
-		data_buf[fill++] = data;
-	}
-*/
-	unprocessed = i2c->unprocessed;
-	if (i2c->msg_idx == i2c->msg_num - 1)
-		unprocessed -= 1;
+	u32 len;
 
-	len = min_t(size_t,
-		    unprocessed,
-		    SPACEMIT_I2C_TX_FIFO_DEPTH - fill);
-
-	/*if(len == i2c->unprocessed && len != 1)*/
-		/*len -= 1;*/
-
-	/*dev_err(i2c->dev, "fill len: %d\n", len);*/
-	len += fill;
-
-	for (; fill < len; fill ++) {
-		data = *(msg_buf++);
-		data |= SPACEMIT_WFIFO_CTRL_TB;
-		data_buf[fill] = data;
-	}
-
-	for (i = 0; i < fill; i++) {
-		/*dev_err(i2c->dev, "write: %x\n", data_buf[i]);*/
-		writel(data_buf[i], i2c->base + SPACEMIT_IWFIFO);
-		/*u32 count = 0;*/
-		/*count = spacemit_i2c_read_reg(i2c, IWFIFO_WPTR);*/
-		/*dev_err(i2c->dev, "write count: %d\n", count & 0xf);*/
-	}
-
-	udelay(500);
-
+	len = spacemit_i2c_fill_fifo(i2c);
 	while (len > 0) {
 		*(i2c->msg_buf++) = readl(i2c->base + SPACEMIT_IRFIFO);
 		i2c->unprocessed --;
 		len --;
-		/*dev_err(i2c->dev, "prepare read: %x\n", *(i2c->msg_buf - 1));*/
 	}
 #else
 	*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
