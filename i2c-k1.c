@@ -10,7 +10,7 @@
  #include <linux/of_address.h>
  #include <linux/platform_device.h>
 
-#define DEBUG(i2c, x, ...) dev_err(i2c, x, ##__VA_ARGS__)
+#define DEBUG(x, ...) dev_err(i2c->dev, x, ##__VA_ARGS__)
 
 #define I2C_FIFO		1
 
@@ -279,7 +279,7 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	u32 target_addr_rw, val;
 	struct i2c_msg *cur_msg = i2c->msgs + i2c->msg_idx;
 
-	DEBUG(i2c->dev, "i2c start");
+	DEBUG("i2c start");
 
 	i2c->read = !!(cur_msg->flags & I2C_M_RD);
 
@@ -310,7 +310,7 @@ static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
 
-	DEBUG(i2c->dev, "i2c stop");
+	DEBUG("i2c stop");
 #ifdef I2C_FIFO
 	val = *i2c->msg_buf;
 	val |= SPACEMIT_WFIFO_CTRL_TB | SPACEMIT_WFIFO_CTRL_STOP;
@@ -339,7 +339,7 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 	struct i2c_msg *msg;
 
 	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
-		DEBUG(i2c->dev, "next msg");
+		DEBUG("next msg");
 		msg = &i2c->msgs[i2c->msg_idx];
 		i2c->msg_buf = msg->buf;
 		i2c->unprocessed = msg->len;
@@ -398,7 +398,7 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 		    unprocessed,
 		    SPACEMIT_I2C_TX_FIFO_DEPTH - fill);
 
-	DEBUG(i2c->dev, "fill len: %d", len);
+	DEBUG("fill len: %d", len);
 	len += fill;
 
 	for (; fill < len; fill ++) {
@@ -546,7 +546,7 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 	if (!(i2c->status & (SPACEMIT_SR_ERR | SPACEMIT_SR_MSD)))
 		return;
 
-	DEBUG(i2c->dev, "done");
+	DEBUG("done");
 	/*
 	 * Here the transaction is already done, we don't need any
 	 * other interrupt signals from now, in case any interrupt
@@ -586,26 +586,26 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 
 	switch (i2c->state) {
 	case SPACEMIT_STATE_START:
-		DEBUG(i2c->dev, "handle start");
+		DEBUG("handle start");
 		spacemit_i2c_handle_start(i2c);
 		break;
 	case SPACEMIT_STATE_READ:
-		DEBUG(i2c->dev, "handle read");
+		DEBUG("handle read");
 		spacemit_i2c_handle_read(i2c);
 		break;
 	case SPACEMIT_STATE_WRITE:
-		DEBUG(i2c->dev, "handle write");
+		DEBUG("handle write");
 		spacemit_i2c_handle_write(i2c);
 		break;
 	default:
 		break;
 	}
 
-	DEBUG(i2c->dev, "i2c->state: %d", i2c->state);
+	DEBUG("i2c->state: %d", i2c->state);
 	if (i2c->state != SPACEMIT_STATE_IDLE) {
 		if (spacemit_i2c_is_last_msg(i2c)) {
 			/* trigger next byte with stop */
-			DEBUG(i2c->dev, "before stop: i2c->state: %d, i2c->idx: %d, i2c->unprocessed:%d", i2c->state, i2c->msg_idx, i2c->unprocessed);
+			DEBUG("before stop: i2c->state: %d, i2c->idx: %d, i2c->unprocessed:%d", i2c->state, i2c->msg_idx, i2c->unprocessed);
 			spacemit_i2c_stop(i2c);
 		} else {
 			/* trigger next byte */
