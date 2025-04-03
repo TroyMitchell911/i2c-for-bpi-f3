@@ -3,14 +3,18 @@
  * Copyright (C) 2024-2025 Troy Mitchell <troymitchell988@gmail.com>
  */
 
- #include <linux/clk.h>
+ #include "linux/hrtimer.h"
+#include <linux/clk.h>
  #include <linux/i2c.h>
  #include <linux/iopoll.h>
  #include <linux/module.h>
  #include <linux/of_address.h>
  #include <linux/platform_device.h>
 
-#define DEBUG(x, ...) dev_err(i2c->dev, x, ##__VA_ARGS__)
+/*#define DEBUG(x, ...) dev_err(i2c->dev, x, ##__VA_ARGS__)*/
+#define DEBUG(x, ...) 
+#define DEBUG2(x, ...) dev_err(i2c->dev, x, ##__VA_ARGS__)
+/*#define DEBUG2(x, ...) */
 
 #define I2C_FIFO		1
 
@@ -116,6 +120,7 @@ enum spacemit_i2c_state {
 	SPACEMIT_STATE_START,
 	SPACEMIT_STATE_READ,
 	SPACEMIT_STATE_WRITE,
+	SPACEMIT_STATE_STOP,
 };
 
 /* i2c-spacemit driver's main struct */
@@ -136,6 +141,10 @@ struct spacemit_i2c_dev {
 	u8 *msg_buf;
 	/* the number of unprocessed bytes remaining in the current message  */
 	u32 unprocessed;
+
+	u32 read_len;
+	ktime_t read_timeout;
+	struct hrtimer timer;
 
 	enum spacemit_i2c_state state;
 	bool read;
@@ -245,7 +254,7 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 	 * i2c_start function.
 	 * Otherwise, it will cause an erroneous empty interrupt before i2c_start.
 	 */
-	val |= SPACEMIT_CR_DRFIE;
+	/*val |= SPACEMIT_CR_DRFIE;*/
 
 	if (i2c->clock_freq == SPACEMIT_I2C_MAX_FAST_MODE_FREQ)
 		val |= SPACEMIT_CR_MODE_FAST;
@@ -262,6 +271,7 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 #ifdef I2C_FIFO
 	val |= SPACEMIT_CR_FIFOEN;
 	val |= SPACEMIT_CR_RXHFIE;
+	val |= SPACEMIT_CR_TXDONEIE;
 #endif
 
 	writel(val, i2c->base + SPACEMIT_ICR);
@@ -277,8 +287,6 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 {
 	u32 target_addr_rw, val;
 	struct i2c_msg *cur_msg = i2c->msgs + i2c->msg_idx;
-
-	DEBUG("i2c start");
 
 	i2c->read = !!(cur_msg->flags & I2C_M_RD);
 
@@ -308,19 +316,25 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_stop(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
+	int ret;
 
-	DEBUG("i2c stop");
 #ifdef I2C_FIFO
+	/*DEBUG2("i2c stop");*/
 	val = *i2c->msg_buf;
 	val |= SPACEMIT_WFIFO_CTRL_TB | SPACEMIT_WFIFO_CTRL_STOP;
 	if (i2c->read)
 		val |= SPACEMIT_WFIFO_CTRL_ACKNAK;
 	writel(val, i2c->base + SPACEMIT_IWFIFO);
-	/* TODO: if we don't add delay here, the i2c hadrware will not detect master stop signal */
-	udelay(500);
-	if (i2c->read)
-		*i2c->msg_buf = readl(i2c->base + SPACEMIT_IRFIFO);
 	i2c->unprocessed --;
+	/* TODO: if we don't add delay here, the i2c hadrware will not detect master stop signal */
+	/*udelay(500);*/
+	/*ret = readl_poll_timeout_atomic(i2c->base + SPACEMIT_ISR,*/
+					/*val, val & (SPACEMIT_SR_ERR | SPACEMIT_SR_MSD),*/
+					/*100, 1000);*/
+	/*i2c->state = SPACEMIT_STATE_STOP;*/
+	/*val = readl(i2c->base + SPACEMIT_ICR);*/
+	/*val |= SPACEMIT_CR_TXEIE;*/
+	/*writel(val, i2c->base + SPACEMIT_ICR);*/
 #else
 	val = readl(i2c->base + SPACEMIT_ICR);
 	val |= SPACEMIT_CR_STOP | SPACEMIT_CR_ALDIE | SPACEMIT_CR_TB;
@@ -338,11 +352,11 @@ static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
 	struct i2c_msg *msg;
 
 	for (i2c->msg_idx = 0; i2c->msg_idx < i2c->msg_num; i2c->msg_idx++) {
-		DEBUG("next msg");
 		msg = &i2c->msgs[i2c->msg_idx];
 		i2c->msg_buf = msg->buf;
 		i2c->unprocessed = msg->len;
 		i2c->status = 0;
+		i2c->read_len = 0;
 
 		reinit_completion(&i2c->complete);
 
@@ -381,9 +395,8 @@ static bool spacemit_i2c_is_last_msg(struct spacemit_i2c_dev *i2c)
 
 static u16 spacemit_i2c_fill_fifo(struct spacemit_i2c_dev *i2c)
 {
-	u32 data_buf[SPACEMIT_I2C_FIFO_DEPTH], data, unprocessed;
+	u32 data_buf[SPACEMIT_I2C_FIFO_DEPTH], unprocessed;
 	u16 len, i;
-	char *msg_buf = i2c->msg_buf;
 
 	unprocessed = i2c->unprocessed;
 	/* The last byte will be processed in spacemit_i2c_stop */
@@ -394,11 +407,10 @@ static u16 spacemit_i2c_fill_fifo(struct spacemit_i2c_dev *i2c)
 		    unprocessed,
 		    SPACEMIT_I2C_FIFO_DEPTH);
 
-	for (i = 0; i < len; i++) {
-		data = *(msg_buf++);
-		data |= SPACEMIT_WFIFO_CTRL_TB;
-		data_buf[i] = data;
-	}
+	for (i = 0; i < len; i++)
+		data_buf[i] = i2c->msg_buf[i] | SPACEMIT_WFIFO_CTRL_TB;
+
+	/*DEBUG("fill len: %d", len);*/
 
 	for (i = 0; i < len; i++) {
 		writel(data_buf[i], i2c->base + SPACEMIT_IWFIFO);
@@ -414,7 +426,8 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 #if I2C_FIFO
 	u32 val;
 
-	spacemit_i2c_fill_fifo(i2c);
+	i2c->msg_buf += spacemit_i2c_fill_fifo(i2c);
+	/*DEBUG2("after fill: %d", *i2c->msg_buf);*/
 
 	val = readl(i2c->base + SPACEMIT_ICR);
 	val |= SPACEMIT_CR_TXEIE;
@@ -428,10 +441,15 @@ static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 {
 	/* if transfer completes, SPACEMIT_ISR will handle it */
-	if (i2c->status & SPACEMIT_SR_MSD)
+	if (i2c->status & SPACEMIT_SR_MSD) {
+		DEBUG2("SR_MSR out");
 		return;
+	}
+	/*DEBUG2("i2c->unprocessed = %d", i2c->unprocessed);*/
 
 	if (i2c->unprocessed) {
+		/*udelay(500);*/
+		/*DEBUG2("fill transmit_buf");*/
 		/*writel(*i2c->msg_buf++, i2c->base + SPACEMIT_IDBR);*/
 		/*i2c->unprocessed--;*/
 		spacemit_i2c_fill_transmit_buf(i2c);
@@ -440,21 +458,37 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 
 	/* SPACEMIT_STATE_IDLE avoids trigger next byte */
 	i2c->state = SPACEMIT_STATE_IDLE;
-
 	complete(&i2c->complete);
+}
+
+static enum hrtimer_restart spacemit_i2c_read_timeout_handler(struct hrtimer *timer)
+{
+	struct spacemit_i2c_dev *i2c = container_of(timer, struct spacemit_i2c_dev, timer);
+	u32 val;
+
+	DEBUG("handler trigger!");
+
+	while (i2c->read_len > 0) {
+		*(i2c->msg_buf++) = readl(i2c->base + SPACEMIT_IRFIFO);
+		i2c->unprocessed --;
+		i2c->read_len --;
+	}
+	
+	/* We have to enable TXEIE to trigger interrupt */
+	val = readl(i2c->base + SPACEMIT_ICR);
+	val |= SPACEMIT_CR_TXEIE;
+	writel(val, i2c->base + SPACEMIT_ICR);
+
+	return HRTIMER_NORESTART;
 }
 
 static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 {
 #if I2C_FIFO
-	u32 len;
-
-	len = spacemit_i2c_fill_fifo(i2c);
-	while (len > 0) {
-		*(i2c->msg_buf++) = readl(i2c->base + SPACEMIT_IRFIFO);
-		i2c->unprocessed --;
-		len --;
-	}
+	i2c->read_len = spacemit_i2c_fill_fifo(i2c);
+	DEBUG("read len: %d", i2c->read_len);
+	if (i2c->read_len && i2c->read_len < SPACEMIT_I2C_FIFO_DEPTH)
+		hrtimer_start(&i2c->timer, i2c->read_timeout, HRTIMER_MODE_REL);
 #else
 	*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
 	i2c->unprocessed--;
@@ -463,9 +497,19 @@ static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
 
 static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 {
-	if (i2c->unprocessed)
-		spacemit_i2c_prepare_read(i2c);
-
+	if (!i2c->read_len) {
+		DEBUG("read: prepare");
+		if (i2c->unprocessed)
+			spacemit_i2c_prepare_read(i2c);
+	} else {
+		hrtimer_cancel(&i2c->timer);
+		DEBUG("read: real");
+		while (i2c->read_len > 0) {
+			*(i2c->msg_buf++) = readl(i2c->base + SPACEMIT_IRFIFO);
+			i2c->unprocessed --;
+			i2c->read_len --;
+		}
+	}
 	/* if transfer completes, SPACEMIT_ISR will handle it */
 	if (i2c->status & (SPACEMIT_SR_MSD | SPACEMIT_SR_ACKNAK))
 		return;
@@ -499,14 +543,20 @@ static void spacemit_i2c_err_check(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
 
+	/*DEBUG2("before done");*/
 	/*
 	 * Send transaction complete signal:
 	 * error happens, detect master stop
 	 */
-	if (!(i2c->status & (SPACEMIT_SR_ERR | SPACEMIT_SR_MSD)))
+	/*if (!(i2c->status & (SPACEMIT_SR_ERR | SPACEMIT_SR_MSD)) && i2c->state != SPACEMIT_STATE_STOP)*/
+	if (!(i2c->status & (SPACEMIT_SR_ERR | SPACEMIT_SR_MSD))) {
+		/*DEBUG2("ERR CHECK RETURN");*/
 		return;
+	}
 
-	DEBUG("done");
+	DEBUG2("done");
+	if (i2c->read)
+		*i2c->msg_buf = readl(i2c->base + SPACEMIT_IRFIFO);
 	/*
 	 * Here the transaction is already done, we don't need any
 	 * other interrupt signals from now, in case any interrupt
@@ -534,6 +584,7 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 		return IRQ_HANDLED;
 
 	i2c->status = status;
+	DEBUG("SR: 0x%x", status);
 
 	spacemit_i2c_clear_int_status(i2c, status);
 
@@ -541,7 +592,8 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 		goto err_out;
 
 	val = readl(i2c->base + SPACEMIT_ICR);
-	val &= ~(SPACEMIT_CR_TXEIE | SPACEMIT_CR_TB | SPACEMIT_CR_ACKNAK | SPACEMIT_CR_STOP | SPACEMIT_CR_START);
+	val &= ~(SPACEMIT_CR_TXEIE);
+	/*val &= ~(SPACEMIT_CR_TXEIE | SPACEMIT_CR_TB | SPACEMIT_CR_ACKNAK | SPACEMIT_CR_STOP | SPACEMIT_CR_START);*/
 	writel(val, i2c->base + SPACEMIT_ICR);
 
 	switch (i2c->state) {
@@ -561,11 +613,9 @@ static irqreturn_t spacemit_i2c_irq_handler(int irq, void *devid)
 		break;
 	}
 
-	DEBUG("i2c->state: %d", i2c->state);
 	if (i2c->state != SPACEMIT_STATE_IDLE) {
 		if (spacemit_i2c_is_last_msg(i2c)) {
 			/* trigger next byte with stop */
-			DEBUG("before stop: i2c->state: %d, i2c->idx: %d, i2c->unprocessed:%d", i2c->state, i2c->msg_idx, i2c->unprocessed);
 			spacemit_i2c_stop(i2c);
 		} else {
 			/* trigger next byte */
@@ -593,7 +643,9 @@ static void spacemit_i2c_calc_timeout(struct spacemit_i2c_dev *i2c)
 	 */
 	timeout = cnt * 9 * USEC_PER_SEC / i2c->clock_freq;
 
-	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC / 10) / i2c->msg_num;
+	i2c->read_timeout = ktime_set(0, (timeout + USEC_PER_SEC / 20) * 1000 / i2c->msg_num);
+
+	i2c->adapt.timeout = usecs_to_jiffies(timeout + USEC_PER_SEC) / i2c->msg_num;
 }
 
 static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, int num)
@@ -604,8 +656,10 @@ static int spacemit_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg *msgs, in
 	i2c->msgs = msgs;
 	i2c->msg_num = num;
 
-	spacemit_i2c_calc_timeout(i2c);
+	spacemit_i2c_reset(i2c);
 
+	spacemit_i2c_calc_timeout(i2c);
+	
 	spacemit_i2c_init(i2c);
 
 	spacemit_i2c_enable(i2c);
@@ -649,7 +703,7 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	if (!i2c)
 		return -ENOMEM;
 
-	of_property_read_u32(of_node, "clock-frequency", &i2c->clock_freq);
+	ret = of_property_read_u32(of_node, "clock-frequency", &i2c->clock_freq);
 	if (ret && ret != -EINVAL)
 		dev_warn(dev, "failed to read clock-frequency property: %d\n", ret);
 
@@ -692,6 +746,9 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 		/*return dev_err_probe(dev, PTR_ERR(clk), "failed to enable bus clock");*/
 
 	spacemit_i2c_reset(i2c);
+
+	hrtimer_init(&i2c->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	i2c->timer.function =  spacemit_i2c_read_timeout_handler;
 
 	i2c_set_adapdata(&i2c->adapt, i2c);
 	i2c->adapt.owner = THIS_MODULE;
