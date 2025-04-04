@@ -4,18 +4,15 @@
  */
 
 #include <linux/clk.h>
- #include <linux/i2c.h>
- #include <linux/iopoll.h>
- #include <linux/module.h>
- #include <linux/of_address.h>
- #include <linux/platform_device.h>
-
-#define I2C_FIFO		1
+#include <linux/i2c.h>
+#include <linux/iopoll.h>
+#include <linux/module.h>
+#include <linux/of_address.h>
+#include <linux/platform_device.h>
 
 /* spacemit i2c registers */
 #define SPACEMIT_ICR		 0x0		/* Control register */
 #define SPACEMIT_ISR		 0x4		/* Status register */
-#define SPACEMIT_IDBR		 0xc		/* Data buffer register */
 #define SPACEMIT_IBMR		 0x1c		/* Bus monitor register */
 #define SPACEMIT_IWFIFO		 0x20		/* Write FIFO Register */
 #define SPACEMIT_IWFIFO_WPTR  	 0x24		/* Write FIFO Write Pointer Register */
@@ -92,8 +89,6 @@
 #define SPACEMIT_BMR_SCL         BIT(1)		/* SCL line level */
 
 /* SPACEMIT_IWFIFO register fields */
-#define SPACEMIT_WFIFO_DATA_MSK      0x000000FF  /* data: bit[7:0] */
-#define SPACEMIT_WFIFO_CTRL_MSK      0x000003E0  /* control: bit[11:8] */
 #define SPACEMIT_WFIFO_CTRL_START    BIT(8)      /* start bit */
 #define SPACEMIT_WFIFO_CTRL_STOP     BIT(9)      /* stop bit */
 #define SPACEMIT_WFIFO_CTRL_ACKNAK   BIT(10)     /* send ACK(0) or NAK(1) */
@@ -114,7 +109,6 @@ enum spacemit_i2c_state {
 	SPACEMIT_STATE_START,
 	SPACEMIT_STATE_READ,
 	SPACEMIT_STATE_WRITE,
-	SPACEMIT_STATE_STOP,
 };
 
 /* i2c-spacemit driver's main struct */
@@ -135,7 +129,6 @@ struct spacemit_i2c_dev {
 	u8 *msg_buf;
 	/* the number of unprocessed bytes remaining in the current message  */
 	u32 unprocessed;
-
 	u32 read_len;
 
 	enum spacemit_i2c_state state;
@@ -170,7 +163,6 @@ static void spacemit_i2c_flush_fifo_buffer(struct spacemit_i2c_dev *i2c)
 	writel(0, i2c->base + SPACEMIT_IRFIFO_WPTR);
 	writel(0, i2c->base + SPACEMIT_IRFIFO_RPTR);
 }
-
 
 static void spacemit_i2c_reset(struct spacemit_i2c_dev *i2c)
 {
@@ -243,23 +235,26 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 {
 	u32 val;
 
+	val = SPACEMIT_CR_FIFOEN;
+	
 	/*
 	 * Unmask interrupt bits for all xfer mode:
 	 * bus error, arbitration loss detected.
 	 * For transaction complete signal, we use master stop
 	 * interrupt, so we don't need to unmask SPACEMIT_CR_TXDONEIE.
 	 */
-	val = SPACEMIT_CR_BEIE | SPACEMIT_CR_ALDIE;
+	val |= SPACEMIT_CR_BEIE | SPACEMIT_CR_ALDIE;
 
 	/*
 	 * Unmask interrupt bits for interrupt xfer mode:
-	 * When IDBR receives a byte, an interrupt is triggered.
+	 * The IRFIFO has 16 entries. When this bit is turned on, 
+	 * an interrupt will be triggered when it is half-full.
 	 *
 	 * For the tx empty interrupt, it will be enabled in the
 	 * i2c_start function.
 	 * Otherwise, it will cause an erroneous empty interrupt before i2c_start.
 	 */
-	/*val |= SPACEMIT_CR_DRFIE;*/
+	val |= SPACEMIT_CR_RXHFIE;
 
 	if (i2c->clock_freq == SPACEMIT_I2C_MAX_FAST_MODE_FREQ)
 		val |= SPACEMIT_CR_MODE_FAST;
@@ -272,12 +267,6 @@ static void spacemit_i2c_init(struct spacemit_i2c_dev *i2c)
 
 	/* enable master stop detected */
 	val |= SPACEMIT_CR_MSDE | SPACEMIT_CR_MSDIE;
-
-#ifdef I2C_FIFO
-	val |= SPACEMIT_CR_FIFOEN;
-	val |= SPACEMIT_CR_RXHFIE;
-	/*val |= SPACEMIT_CR_TXDONEIE;*/
-#endif
 
 	writel(val, i2c->base + SPACEMIT_ICR);
 }
@@ -300,22 +289,13 @@ static void spacemit_i2c_start(struct spacemit_i2c_dev *i2c)
 	target_addr_rw = (cur_msg->addr & 0x7f) << 1;
 	if (cur_msg->flags & I2C_M_RD)
 		target_addr_rw |= 1;
-
-#if I2C_FIFO
 	writel(target_addr_rw | SPACEMIT_WFIFO_CTRL_START | SPACEMIT_WFIFO_CTRL_TB, i2c->base + SPACEMIT_IWFIFO);
+
 	val = readl(i2c->base + SPACEMIT_ICR);
 	val |= SPACEMIT_CR_TXBEGIN;
+	/* Enable write-empty interrupt. */
 	val |= SPACEMIT_CR_TXEIE;
 	writel(val, i2c->base + SPACEMIT_ICR);
-#else
-	writel(target_addr_rw, i2c->base + SPACEMIT_IDBR);
-
-	/* send start pulse */
-	val = readl(i2c->base + SPACEMIT_ICR);
-	val &= ~SPACEMIT_CR_STOP;
-	val |= SPACEMIT_CR_START | SPACEMIT_CR_TB | SPACEMIT_CR_DTEIE;
-	writel(val, i2c->base + SPACEMIT_ICR);
-#endif
 }
 
 static int spacemit_i2c_xfer_msg(struct spacemit_i2c_dev *i2c)
@@ -375,31 +355,33 @@ static u16 spacemit_i2c_fill_fifo(struct spacemit_i2c_dev *i2c)
 
 	for (i = 0; i < len; i++) {
 		writel(data_buf[i], i2c->base + SPACEMIT_IWFIFO);
+		/* For reading, we'll handle the `unprocessed` when we actually read it. */
 		if (!i2c->read)
 			i2c->unprocessed --;
 	}
 
 	/* If there isn't delay, the stop signal will not be detected. */
 	if (!i2c->read)
-		udelay(100);
+		udelay(50);
 
 	return len;
 }
 
-static void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
+static inline void spacemit_i2c_fill_transmit_buf(struct spacemit_i2c_dev *i2c)
 {
-#if I2C_FIFO
 	u32 val;
 
 	i2c->msg_buf += spacemit_i2c_fill_fifo(i2c);
 
+	/* Enable write-empty interrupt. */
 	val = readl(i2c->base + SPACEMIT_ICR);
 	val |= SPACEMIT_CR_TXEIE;
 	writel(val, i2c->base + SPACEMIT_ICR);
-#else
-	spacemit_i2c_write_reg(i2c, IDBR, *i2c->msg_buf++);
-	i2c->unprocessed--;
-#endif	
+}
+
+static inline void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
+{
+	i2c->read_len = spacemit_i2c_fill_fifo(i2c);
 }
 
 static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
@@ -409,24 +391,12 @@ static void spacemit_i2c_handle_write(struct spacemit_i2c_dev *i2c)
 		return;
 
 	if (i2c->unprocessed) {
-		/*udelay(500);*/
 		spacemit_i2c_fill_transmit_buf(i2c);
 		return;
 	}
 
-	/* SPACEMIT_STATE_IDLE avoids trigger next byte */
 	i2c->state = SPACEMIT_STATE_IDLE;
 	complete(&i2c->complete);
-}
-
-static void spacemit_i2c_prepare_read(struct spacemit_i2c_dev *i2c)
-{
-#if I2C_FIFO
-	i2c->read_len = spacemit_i2c_fill_fifo(i2c);
-#else
-	*i2c->msg_buf++ = spacemit_i2c_read_reg(i2c, IDBR);
-	i2c->unprocessed--;
-#endif
 }
 
 static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
@@ -449,7 +419,6 @@ static void spacemit_i2c_handle_read(struct spacemit_i2c_dev *i2c)
 	if (i2c->unprocessed)
 		return;
 
-	/* SPACEMIT_STATE_IDLE avoids trigger next byte */
 	i2c->state = SPACEMIT_STATE_IDLE;
 	complete(&i2c->complete);
 }
@@ -459,12 +428,8 @@ static void spacemit_i2c_handle_start(struct spacemit_i2c_dev *i2c)
 	u32 val;
 
 	i2c->state = i2c->read ? SPACEMIT_STATE_READ : SPACEMIT_STATE_WRITE;
-	/*if (i2c->state == SPACEMIT_STATE_WRITE) {*/
-		/*spacemit_i2c_handle_write(i2c);*/
-		/*return;*/
-	/*}*/
 
-	/* We have to enable TXEIE to trigger interrupt */
+	/* Trigger the next interrupt to continue processing by using the TXEIE interrupt. */
 	val = readl(i2c->base + SPACEMIT_ICR);
 	val |= SPACEMIT_CR_TXEIE;
 	writel(val, i2c->base + SPACEMIT_ICR);
@@ -594,7 +559,7 @@ static u32 spacemit_i2c_func(struct i2c_adapter *adap)
 }
 
 static const struct i2c_algorithm spacemit_i2c_algo = {
-	.master_xfer = spacemit_i2c_xfer,
+	.xfer = spacemit_i2c_xfer,
 	.functionality = spacemit_i2c_func,
 };
 
@@ -675,13 +640,11 @@ static int spacemit_i2c_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int spacemit_i2c_remove(struct platform_device *pdev)
+static void spacemit_i2c_remove(struct platform_device *pdev)
 {
 	struct spacemit_i2c_dev *i2c = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&i2c->adapt);
-
-	return 0;
 }
 
 static const struct of_device_id spacemit_i2c_of_match[] = {
